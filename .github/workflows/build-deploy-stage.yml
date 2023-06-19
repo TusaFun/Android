@@ -6,8 +6,9 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: regru-1
     steps:
       - name: Checkout gallery code
         uses: actions/checkout@v3
       - run: ./gradlew assembleRelease
+      - run: mv app/build/outputs/apk/release/*.apk /opt/tusa/nginx/files/android/
