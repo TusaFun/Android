@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">tusa_android</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="tusaTitle">Tusa</string>
+    <string name="loginInputHint">Login</string>
+    <string name="passwordInput">Password</string>
+    <string name="i_don_t_have_an_acccount">I don\'t have an acccount</string>
+    <string name="login_button">login</string>
+    <string name="tusaRegistrationTitle">Tusa</string>
+    <string name="create_for_me_reg">Create for me</string>
+    <string name="i_have_account">I have an account</string>
+    <string name="confirm_password">Confirm password</string>
+    <string name="mapbox_access_token">pk.eyJ1IjoiaW52ZWN0eXMiLCJhIjoiY2w0emRzYWx5MG1iMzNlbW91eWRwZzdldCJ9.EAByLTrB_zc7-ytI6GDGBw</string>
+</resources>

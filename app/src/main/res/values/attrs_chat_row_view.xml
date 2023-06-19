@@ -1,0 +1,4 @@
+<resources>
+    <declare-styleable name="ChatRowView">
+    </declare-styleable>
+</resources>
