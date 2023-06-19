@@ -6,9 +6,22 @@ on:
 
 jobs:
   build:
-    runs-on: regru-1
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout gallery code
         uses: actions/checkout@v3
       - run: ./gradlew assembleRelease
-      - run: mv app/build/outputs/apk/release/*.apk /opt/tusa/nginx/files/android/
+      - name: Save build
+        uses: actions/upload-artifact@v2
+        with:
+          name: tusa-android
+          path: app/build/outputs/apk/release/*.apk
+
+  deploy:
+    runs-on: regru-1
+    steps:
+      - name: Get artifcat
+        uses: actions/download-artifact@v2
+        with:
+          name: tusa-android
+      - run: mv *.apk /opt/tusa/nginx/files/android/
