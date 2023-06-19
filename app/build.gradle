@@ -1,16 +1,14 @@
 plugins {
     id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
-    id 'com.google.protobuf'
 }
 
 android {
-    namespace 'com.example.tusa_android'
+    namespace 'com.jupiter.tusaandroid'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.tusa_android"
-        minSdk 24
+        applicationId "com.jupiter.tusaandroid"
+        minSdk 28
         targetSdk 33
         versionCode 1
         versionName "1.0"
@@ -24,73 +22,27 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-
-    buildFeatures {
-        viewBinding = true
-    }
-
-
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = '1.8'
-    }
-}
-
-protobuf {
-    protoc {
-        artifact = "com.google.protobuf:protoc:3.21.12"
-    }
-    plugins {
-        grpc {
-            artifact = 'io.grpc:protoc-gen-grpc-java:1.51.1'
+    externalNativeBuild {
+        cmake {
+            path file('src/main/cpp/CMakeLists.txt')
+            version '3.18.1'
         }
     }
-
-    generateProtoTasks {
-        all().each { task ->
-            task.builtins {
-                java { option 'lite' }
-            }
-            task.plugins {
-                grpc { option 'lite' }
-            }
-        }
+    buildFeatures {
+        viewBinding true
     }
 }
 
 dependencies {
 
-    // qr code scanner / generator
-    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
-
-    // file compressor
-    implementation 'id.zelory:compressor:3.0.1'
-
-    // Http
-    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
-
-    // GRPC
-    implementation 'io.grpc:grpc-stub:1.51.1'
-    implementation 'io.grpc:grpc-protobuf-lite:1.51.1'
-    implementation("io.grpc:grpc-okhttp:1.51.1")
-    implementation 'org.apache.tomcat:annotations-api:6.0.53'
-
-    // mapbox
-    implementation 'com.mapbox.maps:android:10.10.0'
-    implementation 'com.google.android.gms:play-services-location:21.0.1'
-    implementation 'androidx.asynclayoutinflater:asynclayoutinflater:1.0.0'
-
-    implementation 'androidx.core:core-ktx:1.9.0'
-    implementation 'androidx.appcompat:appcompat:1.5.1'
-    implementation 'com.google.android.material:material:1.8.0-beta01'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.8.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.5.3'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.5.3'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.4'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
-
