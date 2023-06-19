@@ -19,6 +19,7 @@ jobs:
 
   deploy:
     runs-on: regru-1
+    needs: build
     steps:
       - name: Get artifcat
         uses: actions/download-artifact@v2
