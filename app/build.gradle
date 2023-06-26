@@ -10,7 +10,7 @@ android {
 
     signingConfigs {
         release {
-            storeFile file('/Users/artem/Desktop/configs/android/Key')
+            storeFile file('key/Key')
             storePassword 'qzwsecrftb1'
             keyAlias 'key0'
             keyPassword 'qzwsecrftb1'
