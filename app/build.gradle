@@ -2,9 +2,20 @@ plugins {
     id 'com.android.application'
 }
 
+version '1.0.0'
+
 android {
     namespace 'com.jupiter.tusa'
     compileSdk 33
+
+    signingConfigs {
+        release {
+            storeFile file('/Users/artem/Desktop/configs/android/Key')
+            storePassword 'qzwsecrftb1'
+            keyAlias 'key0'
+            keyPassword 'qzwsecrftb1'
+        }
+    }
 
     defaultConfig {
         applicationId "com.jupiter.tusa"
@@ -14,13 +25,16 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        signingConfig signingConfigs.release
     }
 
     buildTypes {
         release {
             applicationVariants.all { variant ->
                 variant.outputs.all {
-                    outputFileName = "tusa-release-${version}.apk"
+                    if(variant.buildType.name == 'release') {
+                        outputFileName = "tusa-release-${version}-SNAPSHOT.apk"
+                    }
                 }
             }
             debuggable false
