@@ -1,8 +1,7 @@
 plugins {
     id 'com.android.application'
+    id 'com.google.protobuf' version '0.9.3'
 }
-
-version '1.0.0'
 
 android {
     namespace 'com.jupiter.tusa'
@@ -22,7 +21,7 @@ android {
         minSdk 21
         targetSdk 33
         versionCode 1
-        versionName "1.0"
+        versionName "1.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         signingConfig signingConfigs.release
@@ -33,13 +32,21 @@ android {
             applicationVariants.all { variant ->
                 variant.outputs.all {
                     if(variant.buildType.name == 'release') {
-                        outputFileName = "tusa-release-${version}-SNAPSHOT.apk"
+                        outputFileName = "tusa-release-${versionName}-BETA.apk"
                     }
                 }
             }
             debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            buildConfigField "String", "GRPC_HOST", "\"tusa.fun\""
+            buildConfigField "int", "GRPC_PORT", "5010"
+        }
+
+        debug {
+            buildConfigField "String", "GRPC_HOST", "\"tusa.fun\""
+            buildConfigField "int", "GRPC_PORT", "5020"
         }
     }
     compileOptions {
@@ -58,11 +65,45 @@ android {
 }
 
 dependencies {
+    implementation 'io.grpc:grpc-protobuf-lite:1.56.0'
+    implementation 'io.grpc:grpc-okhttp:1.56.0'
+    implementation 'io.grpc:grpc-stub:1.56.0'
+    implementation 'androidx.work:work-runtime:2.8.1'
+    compileOnly 'org.apache.tomcat:annotations-api:6.0.53'
 
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.annotation:annotation:1.5.0'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.5.1'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
+
+protobuf {
+    protoc {
+        // You still need protoc like in the non-Android case
+        artifact = 'com.google.protobuf:protoc:3.22.3'
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.56.0'
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                java {
+                    option "lite"
+                    //outputSubDir = "com/jupiter/tusa"
+                }
+            }
+            task.plugins {
+                grpc { option 'lite' }
+            }
+        }
+    }
+}
+

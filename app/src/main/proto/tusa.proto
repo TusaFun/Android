@@ -1,0 +1,488 @@
+﻿
+syntax = "proto3";
+
+package com.jupiter.tusa;
+
+import "google/protobuf/timestamp.proto";
+
+service TusaTestUsers {
+    rpc SendTestConfiguration (SendTestConfigurationRequest) returns (SendTestConfigurationResponse);
+    rpc GetTestConfigurations (GetTestConfigurationsRequest) returns (GetTestConfigurationsResponse);
+    rpc DeleteConfiguration (DeleteConfigurationRequest) returns (DeleteConfigurationReply);
+}
+
+message DeleteConfigurationRequest {
+    string username = 1;
+}
+
+message DeleteConfigurationReply {
+}
+
+message SendTestConfigurationRequest {
+    string username = 1;
+    repeated string movePoints = 2;
+}
+
+message SendTestConfigurationResponse {
+}
+
+message GetTestConfigurationsRequest {
+    int32 counts = 1;
+    int32 skip = 2;
+}
+
+message GetTestConfigurationsResponse {
+    repeated SendTestConfigurationRequest items = 1;
+}
+
+
+service FriendsQrCodes {
+    rpc CreateQrCode (CreateQrCodeRequest) returns (CreateQrCodeResponse);
+    rpc ScanQrCode (ScanQrCodeRequest) returns (ScanQrCodeResponse);
+}
+
+service TusaFirebase {
+    rpc SetDeviceToken (SetDeviceTokenRequest) returns (SetDeviceTokenReply);
+}
+
+service TusaChats {
+    rpc FindTusaPersonalChatOrCreate (FindTusaPersonalChatOrCreateRequest) returns (TusaPersonalChatForUser);
+    rpc CreateTusaPersonalChat (CreateTusaPersonalChatRequest) returns (CreateTusaPersonalChatReply);
+    rpc PaginateTusaPersonalChats (PaginateTusaPersonalChatsRequest) returns (PaginateTusaPersonalChatsReply);
+}
+
+service TusaCommunications {
+    rpc PaginateTusaMessages (PaginateTusaMessagesRequest) returns (PaginateTusaMessagesReply);
+    rpc SendTusaMessage (SendTusaMessageRequest) returns (SendTusaMessageReply);
+}
+
+service TusaDeviceInfo {
+    rpc SendTusaBatteryInfo (SendTusaBatteryInfoRequest) returns (SendTusaBatteryInfoReply);
+    rpc SendTusaLocation (UpdateTusaLocationRequest) returns (UpdateTusaLocationReply);
+    rpc UpdateTusaUserInfo (UpdateTusaUserInfoRequest) returns (UpdateTusaUserInfoReply);
+}
+
+service TusaFriends {
+    rpc PaginateTusaFriends (PaginateTusaFriendsRequest) returns (PaginateTusaFriendsReply);
+    rpc SetHideTusaFriendRow (SetHideTusaFriendRowRequest) returns (SetHideTusaFriendRowReply);
+    rpc SendTusaFriendRequest (SendTusaFriendRequestRequest) returns (SendTusaFriendRequestReply);
+    rpc AcceptTusaFriendRequest (AcceptTusaFriendRequestRequest) returns (AcceptTusaFriendRequestReply);
+    rpc RemoveTusaFriendRequestFromMe (RemoveTusaFriendRequestFromMeRequest) returns (RemoveTusaFriendRequestFromMeReply);
+    rpc RemoveTusaFriendRequestToMe (RemoveTusaFriendRequestToMeRequest) returns (RemoveTusaFriendRequestToMeReply);
+    rpc RemoveTusaFriend (RemoveTusaFriendRequest) returns (RemoveTusaFriendReply);
+}
+
+service TusaLikes {
+    rpc ChangeTusaLikesState (ChangeTusaLikesStateRequest) returns (ChangeTusaLikesStateReply);
+}
+
+service TusaProfileGallery {
+    rpc CreateTusaPost (CreateTusaPostRequest) returns (CreateTusaPostReply);
+    rpc PaginateTusaGalleryProfilePosts (PaginateTusaGalleryProfilePostsRequest) returns (PaginateTusaGalleryProfilePostsReply);
+}
+
+service TusaProfile {
+    rpc GetTusaProfile (GetTusaProfileRequest) returns (GetTusaProfileReply);
+    rpc GetTusaProfiles (GetTusaProfilesRequest) returns (GetTusaProfilesReply);
+}
+
+service TusaMarkers {
+    rpc ShowTusaMarkers (ShowTusaMarkersRequest) returns (ShowTusaMarkersReply);
+}
+
+service TusaUser {
+    rpc TusaToken (TusaTokenRequest) returns (TusaTokenReply);
+    rpc RefreshToken (RefreshTokenRequest) returns (RefreshTokenReply);
+    rpc RevokeTusaToken (RevokeTusaTokenRequest) returns (RevokeTusaTokenReply);
+    rpc TusaMe (TusaMeRequest) returns (TusaMeReply);
+    rpc TusaIsOccupedNickname (TusaIsOccupedNicknameRequest) returns (TusaIsOccupedNicknameReply);
+    rpc UpdateTusaProperty (UpdateTusaPropertyRequest) returns (UpdateTusaPropertyReply);
+    rpc CreateTusaMe (CreateTusaMeRequest) returns (CreateTusaMeReply);
+}
+
+service TusaUploader {
+    rpc UploadTusaFile (stream UploadTusaFileRequest) returns (stream UploadTusaFileReply);
+}
+
+service TusaFileRequester {
+    rpc RequestTusaFile (RequestTusaFileRequest) returns (RequestTusaFileReply);
+}
+
+message SetDeviceTokenRequest {
+    string token = 1;
+    string device = 2;
+}
+
+message SetDeviceTokenReply {
+
+}
+
+message ScanQrCodeResponse {
+    bool activated = 1;
+}
+
+message ScanQrCodeRequest {
+    string code = 1;
+}
+
+message CreateQrCodeResponse {
+    string code = 1;
+}
+
+message CreateQrCodeRequest {
+
+}
+
+message RequestTusaFileRequest {
+    string path = 1;
+}
+
+message RequestTusaFileReply {
+    string url = 2;
+}
+
+message UploadTusaFileRequest {
+    TusaFileMetadata metadata = 1;
+    bytes data = 2;
+}
+
+message UploadTusaFileReply {
+    string id = 1;
+    int32 received = 2;
+}
+
+message TusaFileMetadata {
+    string contentType = 1;
+}
+
+
+message CreateTusaMeRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message CreateTusaMeReply {
+    string username = 1;
+}
+
+message UpdateTusaPropertyRequest {
+    string type = 1;
+    string name = 2;
+    string value = 3;
+}
+
+message UpdateTusaPropertyReply {
+
+}
+
+message TusaIsOccupedNicknameRequest {
+    string checkName = 1;
+}
+
+message TusaIsOccupedNicknameReply {
+    bool occuped = 1;
+}
+
+
+message GetTusaProfilesRequest {
+    int32 skip = 1;
+    int32 count = 2;
+    string nickname = 3;
+}
+message GetTusaProfilesReply {
+    repeated GetTusaProfileReply items = 1;
+}
+
+message TusaMeRequest {
+
+
+}
+
+message TusaMeReply {
+    string username = 1;
+    string title = 2;
+    string avatar = 3;
+    string mapUsername = 4;
+    string mapStyle = 5;
+}
+
+message RevokeTusaTokenRequest {
+
+}
+
+message RevokeTusaTokenReply {
+
+}
+
+message RefreshTokenRequest {
+    string accessToken = 1;
+    string refreshToken = 2;
+}
+
+message RefreshTokenReply {
+    string refreshToken = 1;
+    string accessToken = 2;
+    double expireMillisecondsIn = 3;
+    int64 expirationTimestamp = 4;
+}
+
+
+message TusaTokenRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message TusaTokenReply {
+    string accessToken = 1;
+    string refreshToken = 2;
+    string username = 3;
+    int64 expirationTimestamp = 4;
+    double expireMillisecondsIn = 5;
+}
+
+message UpdateTusaLocationReply {
+
+}
+
+message UpdateTusaLocationRequest {
+    double longitude = 1;
+    double latitude = 2;
+}
+
+message UpdateTusaUserInfoRequest {
+    SendTusaBatteryInfoRequest batteryInfo = 1;
+    double longitude = 2;
+    double latitude = 3;
+}
+
+message UpdateTusaUserInfoReply {
+
+}
+
+message ShowTusaMarkersRequest {
+    double lowerLeftX = 1;
+    double lowerLeftY = 2;
+    double upperRightX = 3;
+    double upperRightY = 4;
+}
+
+message ShowTusaMarkersReply {
+    repeated TusaMarker items = 1;
+}
+
+message TusaMarker {
+    string username = 1;
+    double longitude = 2;
+    double latitude = 3;
+    string title = 4;
+    string avatar = 5;
+    string location = 6;
+    double speed = 7;
+    int32 BatteryLevel = 8;
+    bool BatteryIsInSaveMode = 9;
+    string BatteryState = 10;
+    google.protobuf.Timestamp lastUpdateTimestamp = 11;
+    bool updateAvatarImageCache = 12;
+}
+
+message GetTusaProfileRequest {
+    string username = 1;
+}
+
+message GetTusaProfileReply {
+    string username = 1;
+    string avatar = 2;
+    int32 friendsAmount = 3;
+    int32 followerAmount = 4;
+    int32 followingsAmount = 5;
+}
+
+
+message PaginateTusaGalleryProfilePostsRequest {
+    bytes pagingState = 1;
+    int32 limit = 2;
+    string username = 3;
+}
+
+message PaginateTusaGalleryProfilePostsReply {
+    bytes pagingState = 1;
+    repeated TusaGalleryProfileItem items = 2;
+}
+
+message TusaGalleryProfileItem {
+    string postId = 1;
+    repeated string images = 2;
+    string message = 3;
+    int64 likes = 4;
+    bool likedByMe = 5;
+}
+
+message CreateTusaPostRequest {
+    repeated string images = 1;
+    string message = 2;
+}
+
+message CreateTusaPostReply {
+
+}
+
+
+message ChangeTusaLikesStateRequest {
+    string target = 1;
+}
+
+message ChangeTusaLikesStateReply {
+
+}
+
+message RemoveTusaFriendRequest {
+    string toUserNickname = 1;
+}
+
+message RemoveTusaFriendReply {
+
+}
+
+message RemoveTusaFriendRequestToMeRequest {
+    string toUserNickname = 1;
+}
+
+message RemoveTusaFriendRequestToMeReply {
+
+}
+
+message RemoveTusaFriendRequestFromMeRequest {
+    string toUserNickname = 1;
+}
+
+message RemoveTusaFriendRequestFromMeReply {
+
+}
+
+message AcceptTusaFriendRequestRequest {
+    string fromUserId = 1;
+}
+
+message AcceptTusaFriendRequestReply {
+
+}
+
+message SendTusaFriendRequestRequest {
+    string toUserId = 1;
+}
+
+message SendTusaFriendRequestReply {
+
+}
+
+message SetHideTusaFriendRowRequest {
+    string hideUsernameFromFriends = 1;
+    bool state = 2;
+}
+
+message SetHideTusaFriendRowReply {
+
+}
+
+
+message PaginateTusaFriendsRequest {
+    int32 skip = 1;
+    int32 limit = 2;
+    TusaPaginateFriendsOptions options = 3;
+    string username = 4;
+}
+
+message PaginateTusaFriendsReply {
+    repeated TusaFriend friends = 1;
+}
+
+message TusaFriend {
+    string userId = 1;
+    string role = 2;
+    string uniqueName = 3;
+    int64 creationTimestamp = 4;
+    bool isRequest = 5;
+    bool myRequest = 6;
+}
+
+enum TusaPaginateFriendsOptions {
+    ALL_REQUESTS = 0;
+    FROM_ME_REQUESTS = 1;
+    TO_ME_REQUESTS = 2;
+    ONLY_MY_FRIENDS = 3;
+    ALL = 4;
+}
+
+
+message SendTusaBatteryInfoRequest {
+    string state = 1;
+    int32 batteryLevel = 2;
+    bool isInSaveMode = 3;
+}
+
+message SendTusaBatteryInfoReply {
+
+}
+
+message SendTusaMessageRequest {
+    string chatId = 1;
+    string toUserId = 2;
+    string message = 3;
+    repeated string payload = 4;
+}
+
+message SendTusaMessageReply {
+
+}
+
+message PaginateTusaMessagesRequest {
+    bytes pagingState = 1;
+    int32 limit = 2;
+    string chatId = 4;
+}
+
+message PaginateTusaMessagesReply {
+    bytes pagingState = 1;
+    repeated TusaChatMessage messages = 2;
+}
+
+
+message TusaChatMessage {
+    string content = 1;
+    string chatId = 2;
+    google.protobuf.Timestamp creationTimestamp = 3;
+    string fromUserId = 4;
+    string toUserId = 5;
+    repeated string payload = 6;
+}
+
+message PaginateTusaPersonalChatsReply {
+    repeated TusaPersonalChatForUser personalChats = 1;
+}
+
+message PaginateTusaPersonalChatsRequest {
+    int32 limit = 1;
+    int32 skip = 2;
+    string search = 3;
+}
+
+message CreateTusaPersonalChatRequest {
+    string withId = 1;
+}
+
+message CreateTusaPersonalChatReply {
+    TusaPersonalChatForUser createdChat = 1;
+}
+
+message FindTusaPersonalChatOrCreateRequest {
+    string withId = 1;
+}
+
+message TusaPersonalChatForUser {
+    string id = 1;
+    string title = 2;
+    string avatar = 3;
+    string withUserId = 4;
+}
+
+
