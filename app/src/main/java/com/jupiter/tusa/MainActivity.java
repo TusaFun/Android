@@ -14,6 +14,7 @@ import com.jupiter.tusa.background.PeriodicWorkRequestHelper;
 import com.jupiter.tusa.background.TusaWorker;
 import com.jupiter.tusa.databinding.ActivityMainBinding;
 import com.jupiter.tusa.grpc.TusaGrpc;
+import com.jupiter.tusa.ui.CheckAvatarFragment;
 import com.jupiter.tusa.ui.CheckJwtTokenFragment;
 import com.jupiter.tusa.ui.LoginFragment;
 import com.jupiter.tusa.utils.TimeBetween;
@@ -96,8 +97,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
         fragmentManager = getSupportFragmentManager();
 
-
-
         SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences(
                 TusaWorker.SharedPreferencesName, Context.MODE_PRIVATE);
         long expirationTimestamp = sharedPreferences.getLong(TusaWorker.SharedPreferencesAccessTokenExpiresTimestampMillisecondsKey, 0);
@@ -107,8 +106,8 @@ public class MainActivity extends AppCompatActivity {
             LoginFragment loginFragment = new LoginFragment();
             setFragment(loginFragment);
         } else {
-            CheckJwtTokenFragment checkJwtTokenFragment = CheckJwtTokenFragment.newInstance("","");
-            setFragment(checkJwtTokenFragment);
+            CheckAvatarFragment mainFragment = CheckAvatarFragment.newInstance("","");
+            setFragment(mainFragment);
             PeriodicWorkRequestHelper.requestMainWorker(getApplicationContext(), true);
         }
 
@@ -122,4 +121,5 @@ public class MainActivity extends AppCompatActivity {
      * which is packaged with this application.
      */
     public native String stringFromJNI();
+    public native int processImage(String imagePath, String imagePathOut);
 }

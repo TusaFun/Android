@@ -10,8 +10,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.jupiter.tusa.BuildConfig;
 import com.jupiter.tusa.Tusa;
 import com.jupiter.tusa.TusaUserGrpc;
-import com.jupiter.tusa.data.LoginDataSource;
-import com.jupiter.tusa.grpc.TusaGrpc;
 
 import java.util.Date;
 
