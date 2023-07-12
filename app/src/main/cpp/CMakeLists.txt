@@ -10,7 +10,14 @@ add_library(turbojpeg STATIC IMPORTED )
 set_target_properties(turbojpeg
         PROPERTIES
         IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/turbojpeg/${ANDROID_ABI}/libturbojpeg.a
-        INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/turbojpeg/include
+#        INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/turbojpeg/include
+)
+
+add_library(exif STATIC IMPORTED )
+set_target_properties(exif
+        PROPERTIES
+        IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/exif/${ANDROID_ABI}/libexif.a
+#        INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/exif/include
 )
 
 add_library(tusa SHARED
@@ -20,7 +27,7 @@ add_library(tusa SHARED
 target_include_directories(tusa PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 find_library(log-lib  log)
-target_link_libraries(tusa PUBLIC ${log-lib} turbojpeg)
+target_link_libraries(tusa PUBLIC ${log-lib} turbojpeg exif)
 
 
 

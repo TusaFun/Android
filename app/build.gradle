@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'com.google.protobuf' version '0.9.3'
+    id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
 }
 
 android {
@@ -41,7 +42,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
 
             buildConfigField "String", "GRPC_HOST", "\"tusa.fun\""
-            buildConfigField "int", "GRPC_PORT", "5010"
+            buildConfigField "int", "GRPC_PORT", "5020"
 
             resValue "string", "app_name", "Tusa (Release)"
         }
@@ -73,6 +74,7 @@ dependencies {
     implementation 'io.grpc:grpc-okhttp:1.56.0'
     implementation 'io.grpc:grpc-stub:1.56.0'
     implementation 'androidx.work:work-runtime:2.8.1'
+    implementation 'com.google.android.gms:play-services-maps:18.1.0'
     compileOnly 'org.apache.tomcat:annotations-api:6.0.53'
 
     implementation 'androidx.appcompat:appcompat:1.6.1'

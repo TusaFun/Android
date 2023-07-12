@@ -2,9 +2,8 @@ package com.jupiter.tusa.ui;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 
@@ -16,17 +15,16 @@ import androidx.fragment.app.Fragment;
 
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.provider.OpenableColumns;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.jupiter.tusa.MainActivity;
+import com.jupiter.tusa.background.TusaWorker;
 import com.jupiter.tusa.databinding.FragmentCheckAvatarBinding;
+import com.jupiter.tusa.uploadfiles.UploadAvatarImageTask;
 
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -115,41 +113,74 @@ public class CheckAvatarFragment extends Fragment {
         mainActivity = (MainActivity) getActivity();
 
         pickImageLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(),
-                result -> {
-                    if (result != null) {
+                uri -> {
+                    if (uri != null) {
                         ContentResolver contentResolver = requireActivity().getContentResolver();
-                        // Get the selected image URI
-                        Uri imageUri = result;
-                        String saveTo = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/save.jpg";
+                        InputStream inputStream = null;
+                        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                        byte[] loadedBytes = null;
                         try {
-                            InputStream inputStream = contentResolver.openInputStream(imageUri);
-                            File destinationFile = new File(saveTo);
-                            FileOutputStream outputStream = new FileOutputStream(destinationFile);
-
+                            inputStream = contentResolver.openInputStream(uri);
                             byte[] buffer = new byte[1024];
                             int bytesRead;
                             while ((bytesRead = inputStream.read(buffer)) != -1) {
-                                outputStream.write(buffer, 0, bytesRead);
+                                byteArrayOutputStream.write(buffer, 0, bytesRead);
                             }
 
+                            loadedBytes = byteArrayOutputStream.toByteArray();
                         } catch (IOException e) {
                             e.printStackTrace();
+                            try {
+                                if(inputStream != null)
+                                    inputStream.close();
+                                byteArrayOutputStream.close();
+                            } catch (IOException ex) {
+                                ex.printStackTrace();
+                            }
                         }
-                        String imagePath = saveTo;
-                        String savePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)+"/1.jpg";
-                        int compressResult = mainActivity.processImage(imagePath, savePath);
-                        System.out.println("compress result " + compressResult);
 
+                        assert loadedBytes != null;
+                        float currentMegabytes = (float)loadedBytes.length / 1048576;
+                        int useQuality = 75;
+                        if(currentMegabytes > 1) {
+                            useQuality = 50;
+                        }
 
+                        // compressing jpeg file
+                        byte[] compressed = mainActivity.compressJpegImage(loadedBytes, useQuality);
 
+                        SharedPreferences sharedPreferences = mainActivity.getSharedPreferences(TusaWorker.SharedPreferencesName, Context.MODE_PRIVATE);
+                        String accessToken = sharedPreferences.getString(TusaWorker.SharedPreferencesAccessTokenKey, "");
+
+                        UploadAvatarImageTask uploadAvatarImageTask = new UploadAvatarImageTask(compressed,accessToken);
+                        uploadAvatarImageTask.execute();
                     }
                 });
 
         binding.checkAvatarPickImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pickImageLauncher.launch("image/*");
+                pickImageLauncher.launch("image/jpeg");
             }
         });
+    }
+
+    private void saveToFolder(byte[] compressed) {
+        // save to download folder
+        FileOutputStream fileOutputStream = null;
+        try {
+            String savePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)+"/1.jpg";
+            fileOutputStream = new FileOutputStream(savePath);
+            fileOutputStream.write(compressed, 0, compressed.length);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if(fileOutputStream != null)
+                    fileOutputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

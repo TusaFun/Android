@@ -15,17 +15,9 @@ import com.jupiter.tusa.background.TusaWorker;
 import com.jupiter.tusa.databinding.ActivityMainBinding;
 import com.jupiter.tusa.grpc.TusaGrpc;
 import com.jupiter.tusa.ui.CheckAvatarFragment;
-import com.jupiter.tusa.ui.CheckJwtTokenFragment;
 import com.jupiter.tusa.ui.LoginFragment;
-import com.jupiter.tusa.utils.TimeBetween;
-import com.jupiter.tusa.utils.TimeUtils;
 
-import org.checkerframework.checker.units.qual.C;
-
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -106,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
             LoginFragment loginFragment = new LoginFragment();
             setFragment(loginFragment);
         } else {
-            CheckAvatarFragment mainFragment = CheckAvatarFragment.newInstance("","");
+            Fragment mainFragment = new CheckAvatarFragment();
             setFragment(mainFragment);
             PeriodicWorkRequestHelper.requestMainWorker(getApplicationContext(), true);
         }
@@ -121,5 +113,5 @@ public class MainActivity extends AppCompatActivity {
      * which is packaged with this application.
      */
     public native String stringFromJNI();
-    public native int processImage(String imagePath, String imagePathOut);
+    public native byte[] compressJpegImage(byte[] inputImage, int quality);
 }

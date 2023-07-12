@@ -3,6 +3,6 @@
 #define TUSA_JPEG_H
 
 int compressImage(int argc, char** argv);
-int simpleCompress(const char* inputFilePath, const char* outputFilePath);
+unsigned char* simpleCompress(unsigned char* inputImageBuffer, const int inputImageBufferSize, int* outputBufferImageSize, int quality);
 
 #endif //TUSA_JPEG_H
