@@ -1,4 +1,5 @@
 name: Android Build and deploy
+
 on:
   push:
     branches: [ "main" ]
@@ -25,7 +26,6 @@ jobs:
         with:
           name: tusa-android
           path: app/build/outputs/apk/release/*.apk
-
   deploy:
     runs-on: regru-1
     needs: build
