@@ -41,3 +41,5 @@ Java_com_jupiter_tusa_MainActivity_compressJpegImage(
     return outputByteArrayImage;
 }
 
+
+

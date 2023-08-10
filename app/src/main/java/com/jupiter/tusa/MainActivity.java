@@ -1,5 +1,7 @@
 package com.jupiter.tusa;
 
+import static android.os.Environment.isExternalStorageRemovable;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -8,15 +10,18 @@ import androidx.fragment.app.FragmentTransaction;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Environment;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.jupiter.tusa.background.PeriodicWorkRequestHelper;
 import com.jupiter.tusa.background.TusaWorker;
+import com.jupiter.tusa.cache.CacheStorage;
 import com.jupiter.tusa.databinding.ActivityMainBinding;
 import com.jupiter.tusa.grpc.TusaGrpc;
-import com.jupiter.tusa.ui.CheckAvatarFragment;
 import com.jupiter.tusa.ui.LoginFragment;
+import com.jupiter.tusa.ui.MapFragment;
 
+import java.io.File;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
@@ -26,8 +31,15 @@ public class MainActivity extends AppCompatActivity {
         System.loadLibrary("tusa");
     }
 
+    // cache
+    private CacheStorage cacheStorage;
+
     private ActivityMainBinding binding;
     private FragmentManager fragmentManager;
+
+    public CacheStorage getCacheStorage() {
+        return cacheStorage;
+    }
 
     public void setFragment(Fragment fragment) {
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
@@ -85,6 +97,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        cacheStorage = new CacheStorage(this);
+
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         fragmentManager = getSupportFragmentManager();
@@ -98,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
             LoginFragment loginFragment = new LoginFragment();
             setFragment(loginFragment);
         } else {
-            Fragment mainFragment = new CheckAvatarFragment();
+            Fragment mainFragment = new MapFragment();
             setFragment(mainFragment);
             PeriodicWorkRequestHelper.requestMainWorker(getApplicationContext(), true);
         }
@@ -108,10 +123,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public File getDiskCacheDir(String uniqueName) {
+        // Check if media is mounted or storage is built-in, if so, try and use external cache dir
+        // otherwise use internal cache dir
+        final String cachePath =
+                Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState()) || !isExternalStorageRemovable()
+                         ? getExternalCacheDir().getPath() :  getCacheDir().getPath();
+
+
+        return new File(cachePath + File.separator + uniqueName);
+    }
+
     /**
      * A native method that is implemented by the 'tusa' native library,
      * which is packaged with this application.
      */
     public native String stringFromJNI();
     public native byte[] compressJpegImage(byte[] inputImage, int quality);
+    //public native void drawImage();
 }
