@@ -18,6 +18,7 @@ import com.jupiter.tusa.background.TusaWorker;
 import com.jupiter.tusa.cache.CacheStorage;
 import com.jupiter.tusa.databinding.ActivityMainBinding;
 import com.jupiter.tusa.grpc.TusaGrpc;
+import com.jupiter.tusa.ui.CheckAvatarFragment;
 import com.jupiter.tusa.ui.LoginFragment;
 import com.jupiter.tusa.ui.MapFragment;
 
@@ -113,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
             LoginFragment loginFragment = new LoginFragment();
             setFragment(loginFragment);
         } else {
-            Fragment mainFragment = new MapFragment();
+            Fragment mainFragment = new CheckAvatarFragment();
             setFragment(mainFragment);
             PeriodicWorkRequestHelper.requestMainWorker(getApplicationContext(), true);
         }
