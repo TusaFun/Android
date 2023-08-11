@@ -114,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
             LoginFragment loginFragment = new LoginFragment();
             setFragment(loginFragment);
         } else {
-            Fragment mainFragment = new CheckAvatarFragment();
+            Fragment mainFragment = new MapFragment();
             setFragment(mainFragment);
             PeriodicWorkRequestHelper.requestMainWorker(getApplicationContext(), true);
         }
