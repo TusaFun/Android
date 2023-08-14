@@ -1,14 +1,18 @@
 package com.jupiter.tusa.map;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
+import android.service.quicksettings.Tile;
+import android.util.Log;
+
 import com.jupiter.tusa.MainActivity;
-
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.microedition.khronos.opengles.GL10;
 
@@ -17,15 +21,24 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     private MainActivity mainActivity;
     private MyGlSurfaceView myGlSurfaceView;
 
+    // viewport
     private float ratio;
     private int width;
     private int height;
 
-    private List<Sprite> tiles = new ArrayList<>();
+    // Камера
+    private float fov = 45f;
+
+    // Карта
+    private Sprite[] tiles = new Sprite[64];
 
     private final float[] modelViewMatrix = new float[16];
     private final float[] projectionMatrix = new float[16];
     private final float[] viewMatrix = new float[16];
+
+    public float getFov() {
+        return fov;
+    }
 
     public float getWidth() {
         return width;
@@ -70,7 +83,16 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         return worldCoordinates;
     }
 
+    public void renderTile(Bitmap tile, float[] vertexLocations, int index, int totalTilesWaitForLoad) {
+        Sprite sprite = new Sprite(mainActivity, tile, index, vertexLocations);
+        tiles[index] = sprite;
+        for(int i = totalTilesWaitForLoad; i < tiles.length; i++) {
+            tiles[i] = null;
+        }
+    }
+
     public void setFov(float fov) {
+        this.fov = fov;
         Matrix.perspectiveM(projectionMatrix, 0, fov, ratio, 6, 7);
     }
 
@@ -78,27 +100,68 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         Matrix.setLookAtM(viewMatrix, 0, x, y, 6f, x, y, 0f, 0f, 1.0f, 0.0f);
     }
 
+    public WorldBounds calcWorldLocationViewportBounds() {
+        float topLeftViewportX = 0f;
+        float topLeftViewportY = 0f;
+
+        float bottomRightX = width;
+        float bottomRightY = height;
+
+        float[] topLeftWorld = screenCoordinatesToWorldLocation(topLeftViewportX, topLeftViewportY);
+        float topLeftXWorld = topLeftWorld[0];
+        float topLeftYWorld = topLeftWorld[1];
+        float topLeftZWorld = topLeftWorld[2];
+
+        float[] bottomRightWorld = screenCoordinatesToWorldLocation(bottomRightX, bottomRightY);
+        float bottomRightXWorld = bottomRightWorld[0];
+        float bottomRightYWorld = bottomRightWorld[1];
+        float bottomRightZWorld = bottomRightWorld[2];
+
+        return new WorldBounds(topLeftXWorld, topLeftYWorld, bottomRightXWorld, bottomRightYWorld);
+    }
+
+    public LatLonBounds calcLatLonBounds(WorldBounds worldBounds) {
+        float topLeftXWorld = worldBounds.topLeftXWorld;
+        float topLeftYWorld = worldBounds.topLeftYWorld;
+
+        float bottomRightXWorld = worldBounds.bottomRightXWorld;
+        float bottomRightYWorld = worldBounds.bottomRightYWorld;
+
+        float topLeftLatitude = TileCoordinateConverter.worldYToLatitude(topLeftYWorld);
+        float topLeftLongitude = TileCoordinateConverter.worldXToLongitude(topLeftXWorld);
+
+        float bottomRightLatitude = TileCoordinateConverter.worldYToLatitude(bottomRightYWorld);
+        float bottomRightLongitude = TileCoordinateConverter.worldXToLongitude(bottomRightXWorld);
+
+        return new LatLonBounds(topLeftLatitude, topLeftLongitude, bottomRightLatitude, bottomRightLongitude);
+        //Log.d("GL_ARTEM", String.format("TopLeft lat = %.3f lon = %.3f BottomRight lat = %.3f lon = %.3f", topLeftLatitude, topLeftLongitude, bottomRightLatitude, bottomRightLongitude));
+    }
+
+    public TilesBounds calcTilesBounds(LatLonBounds bounds, int z) {
+        int[] topLeftTileCoordinates = TileCoordinateConverter.convertToTileCoordinates(bounds.getTopLeftLatitude(), bounds.getTopLeftLongitude(), z);
+        int[] rightBottomTileCoordinates = TileCoordinateConverter.convertToTileCoordinates(bounds.getBottomRightLatitude(), bounds.getBottomRightLongitude(), z);
+
+        return new TilesBounds(topLeftTileCoordinates[0], topLeftTileCoordinates[1], rightBottomTileCoordinates[0], rightBottomTileCoordinates[1]);
+    }
+
     @Override
     public void onDrawFrame(GL10 unused) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 
         Matrix.multiplyMM(modelViewMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
-        for(int i = 0; i < tiles.size(); i++) {
-            Sprite tile = tiles.get(i);
-            tile.draw(modelViewMatrix);
+        for(int i = 0; i < tiles.length; i++) {
+            Sprite tile = tiles[i];
+            if(tile != null) {
+                tile.draw(modelViewMatrix);
+            }
         }
     }
 
     @Override
     public void onSurfaceCreated(GL10 gl, javax.microedition.khronos.egl.EGLConfig config) {
         GLES20.glClearColor(0.95f, 0.95f, 1.0f, 1.0f);
-        Sprite firstTile = new Sprite(mainActivity, null, 0, new float[] {
-                -1f, 1f,
-                -1f, -1f,
-                1f, -1f,
-                1f, 1f
-        }, 0f, 0f);
-        tiles.add(firstTile);
+
+        myGlSurfaceView.renderMap(myGlSurfaceView.getMapZ());
     }
 
     @Override

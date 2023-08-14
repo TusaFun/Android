@@ -19,7 +19,6 @@ public class CacheStorage {
     private DiskLruCache diskLruCache;
     private final Object diskCacheLock = new Object();
     private boolean diskCacheStarting = true;
-    private static final int DISK_CACHE_SIZE = 1024 * 1024 * 10; // 10MB
     private static final String DISK_CACHE_SUBDIR = "thumbnails";
 
     private MainActivity mainActivity;
