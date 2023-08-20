@@ -5,11 +5,6 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import com.jupiter.tusa.MainActivity;
-
-
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.microedition.khronos.opengles.GL10;
 
 public class MyGLRenderer implements GLSurfaceView.Renderer {
@@ -17,11 +12,12 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     private MainActivity mainActivity;
     private MyGlSurfaceView myGlSurfaceView;
 
+    // Viewport
     private float ratio;
     private int width;
     private int height;
 
-    private List<Sprite> tiles = new ArrayList<>();
+    private Sprite[] sprites;
 
     private final float[] modelViewMatrix = new float[16];
     private final float[] projectionMatrix = new float[16];
@@ -43,6 +39,13 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         this.context = context;
         this.mainActivity = (MainActivity) context;
         this.myGlSurfaceView = myGlSurfaceView;
+        this.sprites = new Sprite[myGlSurfaceView.tilesSize];
+    }
+
+    public void setSeeMultiply(float seeMultiply) {
+        float seeHorizontal = ratio * seeMultiply;
+        float seeVertical = 1 * seeMultiply;
+        Matrix.orthoM(projectionMatrix, 0, -seeHorizontal, seeHorizontal, -seeVertical, seeVertical, 6, 7);
     }
 
     public static int loadShader(int type, String shaderCode){
@@ -50,6 +53,28 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         GLES20.glShaderSource(shader, shaderCode);
         GLES20.glCompileShader(shader);
         return shader;
+    }
+
+    public int getFreeSpriteIndex() {
+        for(int i = 0; i < sprites.length; i++) {
+            if(sprites[i] == null) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void renderSprite(Sprite sprite, int index) {
+        sprites[index] = sprite;
+        //Log.d("GL_ARTEM", "Render index = " + free);
+    }
+
+    public void setNullPointerForSprite(int index) {
+        sprites[index] = null;
+    }
+
+    public void moveCameraHorizontally(float x, float y) {
+        Matrix.setLookAtM(viewMatrix, 0, x, y, 6f, x, y, 0f, 0f, 1.0f, 0.0f);
     }
 
     public float[] screenCoordinatesToWorldLocation(float x, float y) {
@@ -70,35 +95,22 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         return worldCoordinates;
     }
 
-    public void setFov(float fov) {
-        Matrix.perspectiveM(projectionMatrix, 0, fov, ratio, 6, 7);
-    }
-
-    public void moveCameraHorizontally(float x, float y) {
-        Matrix.setLookAtM(viewMatrix, 0, x, y, 6f, x, y, 0f, 0f, 1.0f, 0.0f);
-    }
-
     @Override
     public void onDrawFrame(GL10 unused) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 
         Matrix.multiplyMM(modelViewMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
-        for(int i = 0; i < tiles.size(); i++) {
-            Sprite tile = tiles.get(i);
-            tile.draw(modelViewMatrix);
+        for(int i = 0; i < sprites.length; i++) {
+            Sprite sprite = sprites[i];
+            if(sprite != null) {
+                sprite.draw(modelViewMatrix);
+            }
         }
     }
 
     @Override
     public void onSurfaceCreated(GL10 gl, javax.microedition.khronos.egl.EGLConfig config) {
         GLES20.glClearColor(0.95f, 0.95f, 1.0f, 1.0f);
-        Sprite firstTile = new Sprite(mainActivity, null, 0, new float[] {
-                -1f, 1f,
-                -1f, -1f,
-                1f, -1f,
-                1f, 1f
-        }, 0f, 0f);
-        tiles.add(firstTile);
     }
 
     @Override
@@ -106,10 +118,16 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         GLES20.glViewport(0, 0, width, height);
         this.height = height;
         this.width = width;
-        Matrix.setLookAtM(viewMatrix, 0, 0, 0, 6f, 0, 0f, 0f, 0f, 1.0f, 0.0f);
+        moveCameraHorizontally(myGlSurfaceView.getCurrentMapX(), myGlSurfaceView.getCurrentMapY());
 
         ratio = (float) width / height;
-        float fov = 45;
-        Matrix.perspectiveM(projectionMatrix, 0, fov, ratio, 6, 7);
+        float seeMultiply = myGlSurfaceView.getScaleFactor();
+        float seeHorizontal = ratio * seeMultiply;
+        float seeVertical = 1 * seeMultiply;
+        Matrix.orthoM(projectionMatrix, 0, -seeHorizontal, seeHorizontal, -seeVertical, seeVertical, 6, 7);
+        Matrix.multiplyMM(modelViewMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
+
+        int[][][] viewTiles = myGlSurfaceView.calcViewTiles();
+        myGlSurfaceView.renderMap(viewTiles);
     }
 }

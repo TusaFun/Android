@@ -43,7 +43,7 @@ public class CacheStorage {
         new InitDiskCacheTask(this).execute(cacheDir);
 
         final long maxMemory = Runtime.getRuntime().maxMemory();
-        final int maxMemoryKilobytes = (int)(maxMemory / 1024 / 2);
+        final int maxMemoryKilobytes = (int)(maxMemory / 1024);
         memoryCache = new LruCache<String, Bitmap>((int) maxMemoryKilobytes) {
             @Override
             protected int sizeOf(String key, Bitmap bitmap) {

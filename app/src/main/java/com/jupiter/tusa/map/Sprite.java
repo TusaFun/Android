@@ -14,7 +14,6 @@ import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
 public class Sprite {
-
     private final Context mActivityContext;
     private int mTextureUniformHandle;
     private int mTextureCoordinateHandle;
@@ -63,27 +62,16 @@ public class Sprite {
             "gl_FragColor = (texture2D(u_Texture, v_TexCoordinate));" +
             "}";
 
-    private float[] getSpriteVertexLocations(float deltaX, float deltaY) {
+    private float[] getSpriteVertexLocations() {
         return new float[] {
-                leftTopVertexX + deltaX, leftTopVertexY + deltaY,
-                leftBottomVertexX + deltaX, leftBottomVertexY + deltaY,
-                rightBottomVertexX + deltaX, rightBottomVertexY + deltaY,
-                rightTopVertexX + deltaX, rightTopVertexY + deltaY
+                leftTopVertexX, leftTopVertexY,
+                leftBottomVertexX, leftBottomVertexY,
+                rightBottomVertexX, rightBottomVertexY,
+                rightTopVertexX, rightTopVertexY
         };
     }
 
-    public void setPosition(float currentX, float currentY) {
-        float[] spriteLocations = getSpriteVertexLocations(currentX, currentY);
-        ByteBuffer bb = ByteBuffer.allocateDirect(spriteLocations.length * 4);
-        bb.order(ByteOrder.nativeOrder());
-        vertexBuffer = bb.asFloatBuffer();
-        vertexBuffer.put(spriteLocations);
-        vertexBuffer.position(0);
-
-        //Log.d("GL_ARTEM", "currentX = " + currentX + " currentY = " + currentY);
-    }
-
-    public Sprite(Context context, Bitmap bitmap, int useUnit, float[] coordinates, float currentX, float currentY) {
+    public Sprite(Context context, Bitmap bitmap, int useUnit, float[] coordinates) {
         leftTopVertexX = coordinates[0];
         leftTopVertexY = coordinates[1];
         leftBottomVertexX = coordinates[2];
@@ -96,7 +84,7 @@ public class Sprite {
         this.useUnit = useUnit;
         mActivityContext = context;
 
-        float[] spriteVertexLocations = getSpriteVertexLocations(currentX, currentY);
+        float[] spriteVertexLocations = getSpriteVertexLocations();
         ByteBuffer bb = ByteBuffer.allocateDirect(spriteVertexLocations.length * 4);
         bb.order(ByteOrder.nativeOrder());
         vertexBuffer = bb.asFloatBuffer();
