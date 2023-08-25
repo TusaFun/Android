@@ -6,13 +6,11 @@ import com.jupiter.tusa.cache.CacheStorage;
 import java.util.concurrent.ExecutorService;
 
 public class Tile {
-    private int spriteRenderIndex;
-    private boolean onMap = false;
-
     private OnTilePrepared onTilePreparedInternal = new OnTilePrepared() {
         @Override
         public void received(Bitmap bitmap, float[] vertexLocations) {
-            onSpriteReady.ready(bitmap, vertexLocations, viewTiles, Tile.this);
+            preparing = false;
+            onSpriteReady.ready(bitmap, vertexLocations, useIndex, Tile.this);
         }
     };
 
@@ -22,17 +20,19 @@ public class Tile {
     private MainActivity mainActivity;
     private MyGLRenderer renderer;
 
-    private float tileSize = 1;
+    private boolean preparing = true;
+    private float tileSize;
     private int tileX;
     private int tileY;
     private int tileZ;
-    private int[][][] viewTiles;
+    private int useIndex;
 
     public Tile(
             MainActivity mainActivity, OnPrepareSprite onSpriteReady,
             ExecutorService executorService, MyGLRenderer renderer,
-            int tileX, int tileY, int tileZ, int[][][] viewTiles
+            int tileX, int tileY, int tileZ, float tileSize, int useIndex
     ) {
+        this.tileSize = tileSize;
         this.cacheStorage = mainActivity.getCacheStorage();
         this.onSpriteReady = onSpriteReady;
         this.mainActivity = mainActivity;
@@ -41,7 +41,7 @@ public class Tile {
         this.tileX = tileX;
         this.tileY = tileY;
         this.tileZ = tileZ;
-        this.viewTiles = viewTiles;
+        this.useIndex = useIndex;
     }
 
     public int getX() {
@@ -56,19 +56,8 @@ public class Tile {
         return tileZ;
     }
 
-    public int getSpriteRenderIndex() {
-        return spriteRenderIndex;
-    }
-
-    public void setSpriteRenderIndex(int spriteRenderIndex) {
-        this.spriteRenderIndex = spriteRenderIndex;
-    }
-
-    public boolean getOnMap() {
-        return onMap;
-    }
-
     public void render() {
+        // определяем где тайл будет в мировых координатах
         float topLeftX = tileX * tileSize;
         float topLeftY = -tileY * tileSize;
 
@@ -80,7 +69,9 @@ public class Tile {
         };
 
         int[] tileCoordinates = new int[] { tileX, tileY, tileZ };
-        PrepareTileRunnable prepareTileRunnable = new PrepareTileRunnable(cacheStorage, tileCoordinates, vertexLocations, viewTiles, onTilePreparedInternal);
+
+        // загружаем или достаем тайл из кэша
+        PrepareTileRunnable prepareTileRunnable = new PrepareTileRunnable(cacheStorage, tileCoordinates, vertexLocations, onTilePreparedInternal);
         executorService.submit(prepareTileRunnable);
     }
 }

@@ -10,6 +10,7 @@ import com.jupiter.tusa.R;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
@@ -38,9 +39,10 @@ public class Sprite {
     private float rightTopVertexX;
     private float rightTopVertexY;
 
+    final int COORDINATE_SIZE = 4;
     final int COORDS_PER_VERTEX = 2;
     private short drawOrder[] = { 0, 1, 2, 0, 2, 3 };
-    private final int vertexStride = COORDS_PER_VERTEX * 4; //Bytes per vertex
+    private final int vertexStride = COORDS_PER_VERTEX * COORDINATE_SIZE; //Bytes per vertex
     float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 1.0f };
 
     private final String vertexShaderCode =
@@ -85,7 +87,7 @@ public class Sprite {
         mActivityContext = context;
 
         float[] spriteVertexLocations = getSpriteVertexLocations();
-        ByteBuffer bb = ByteBuffer.allocateDirect(spriteVertexLocations.length * 4);
+        ByteBuffer bb = ByteBuffer.allocateDirect(spriteVertexLocations.length * COORDINATE_SIZE);
         bb.order(ByteOrder.nativeOrder());
         vertexBuffer = bb.asFloatBuffer();
         vertexBuffer.put(spriteVertexLocations);

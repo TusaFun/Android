@@ -16,14 +16,12 @@ public class PrepareTileRunnable implements Runnable {
     private final int[] params;
     private OnTilePrepared onTileReady;
     private float[] vertexLocations;
-    private int[][][] viewTiles;
 
-    public PrepareTileRunnable(CacheStorage cacheStorage, int[] tileXYZ, float[] vertexLocations, int[][][] viewTiles, OnTilePrepared onTileReady) {
+    public PrepareTileRunnable(CacheStorage cacheStorage, int[] tileXYZ, float[] vertexLocations, OnTilePrepared onTileReady) {
         this.cacheStorage = cacheStorage;
         this.params = tileXYZ;
         this.onTileReady = onTileReady;
         this.vertexLocations = vertexLocations;
-        this.viewTiles = viewTiles;
     }
 
     @Override

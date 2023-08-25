@@ -5,15 +5,17 @@ import android.view.ScaleGestureDetector;
 public class MapScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
     private float mScaleFactor = 1f;
 
-    final private float maxScale = 5.0f;
-    final private float minScale = 0.1f;
+    private float maxScale = 5.0f;
+    private float minScale = 0.1f;
 
     public float getScaleFactor() {
         return mScaleFactor;
     }
 
-    public void setScaleFactor(float scaleFactor) {
-        this.mScaleFactor = scaleFactor;
+    public MapScaleListener(float startScaleFactor, float minScale, float maxScale) {
+        this.mScaleFactor = startScaleFactor;
+        this.minScale = minScale;
+        this.maxScale = maxScale;
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.jupiter.tusa.cache;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Environment;
+import android.util.Log;
 import android.util.LruCache;
 
 import com.jakewharton.disklrucache.DiskLruCache;
@@ -44,11 +45,26 @@ public class CacheStorage {
 
         final long maxMemory = Runtime.getRuntime().maxMemory();
         final int maxMemoryKilobytes = (int)(maxMemory / 1024);
+        Log.d("GL_ARTEM", "maxMemoryKilobytes " + maxMemoryKilobytes);
         memoryCache = new LruCache<String, Bitmap>((int) maxMemoryKilobytes) {
             @Override
             protected int sizeOf(String key, Bitmap bitmap) {
                 int byteSize = bitmap.getByteCount();
+                int useSize = byteSize / 1024;
+                Log.d("GL_ARTEM", String.format("Size of key(%s) %d", key, useSize));
                 return byteSize / 1024;
+            }
+
+            @Override
+            protected void entryRemoved(boolean evicted, String key, Bitmap oldValue, Bitmap newValue) {
+                Log.d("GL_ARTEM", "Entry removed " + key);
+                super.entryRemoved(evicted, key, oldValue, newValue);
+            }
+
+            @Override
+            public void trimToSize(int maxSize) {
+                Log.d("GL_ARTEM", "Trim to size " + maxSize);
+                super.trimToSize(maxSize);
             }
         };
     }
@@ -78,7 +94,7 @@ public class CacheStorage {
                 if (diskLruCache != null && diskLruCache.get(key) == null) {
                     DiskLruCache.Editor editor = diskLruCache.edit(key);
                     OutputStream outputStream = editor.newOutputStream(0);
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream);
                     outputStream.flush();
                     outputStream.close();
                     editor.commit();
@@ -86,7 +102,6 @@ public class CacheStorage {
             } catch (Exception exception) {
                 exception.printStackTrace();
             }
-
         }
     }
 

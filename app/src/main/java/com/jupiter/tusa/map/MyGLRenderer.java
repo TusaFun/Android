@@ -17,7 +17,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     private int width;
     private int height;
 
-    private Sprite[] sprites;
+    private final Sprite[] sprites;
 
     private final float[] modelViewMatrix = new float[16];
     private final float[] projectionMatrix = new float[16];
@@ -39,12 +39,12 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         this.context = context;
         this.mainActivity = (MainActivity) context;
         this.myGlSurfaceView = myGlSurfaceView;
-        this.sprites = new Sprite[myGlSurfaceView.tilesSize];
+        this.sprites = new Sprite[myGlSurfaceView.tilesAmount];
     }
 
-    public void setSeeMultiply(float seeMultiply) {
-        float seeHorizontal = ratio * seeMultiply;
-        float seeVertical = 1 * seeMultiply;
+    public void setSeeMultiply(double seeMultiply) {
+        float seeHorizontal = (float) (ratio * seeMultiply);
+        float seeVertical = (float) (1 * seeMultiply);
         Matrix.orthoM(projectionMatrix, 0, -seeHorizontal, seeHorizontal, -seeVertical, seeVertical, 6, 7);
     }
 
@@ -53,15 +53,6 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         GLES20.glShaderSource(shader, shaderCode);
         GLES20.glCompileShader(shader);
         return shader;
-    }
-
-    public int getFreeSpriteIndex() {
-        for(int i = 0; i < sprites.length; i++) {
-            if(sprites[i] == null) {
-                return i;
-            }
-        }
-        return -1;
     }
 
     public void renderSprite(Sprite sprite, int index) {
@@ -122,9 +113,9 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
         ratio = (float) width / height;
         float seeMultiply = myGlSurfaceView.getScaleFactor();
-        float seeHorizontal = ratio * seeMultiply;
-        float seeVertical = 1 * seeMultiply;
-        Matrix.orthoM(projectionMatrix, 0, -seeHorizontal, seeHorizontal, -seeVertical, seeVertical, 6, 7);
+        float seeHorizontal = (float) (ratio * seeMultiply);
+        float seeVertical = (float) (1 * seeMultiply);
+        Matrix.orthoM(projectionMatrix, 0, -seeHorizontal, seeHorizontal, -seeVertical, seeVertical, 6, 7f);
         Matrix.multiplyMM(modelViewMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
 
         int[][][] viewTiles = myGlSurfaceView.calcViewTiles();
