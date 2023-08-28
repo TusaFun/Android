@@ -3,14 +3,18 @@ package com.jupiter.tusa.map;
 import android.graphics.Bitmap;
 import com.jupiter.tusa.MainActivity;
 import com.jupiter.tusa.cache.CacheStorage;
+
+import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 public class Tile {
     private OnTilePrepared onTilePreparedInternal = new OnTilePrepared() {
         @Override
         public void received(Bitmap bitmap, float[] vertexLocations) {
-            preparing = false;
-            onSpriteReady.ready(bitmap, vertexLocations, useIndex, Tile.this);
+            Tile.this.bitmap = bitmap;
+            ready = true;
+            onSpriteReady.ready(bitmap, vertexLocations, useIndex, initiator,Tile.this);
         }
     };
 
@@ -20,17 +24,23 @@ public class Tile {
     private MainActivity mainActivity;
     private MyGLRenderer renderer;
 
-    private boolean preparing = true;
+    private Bitmap bitmap;
+    private boolean ready = false;
     private float tileSize;
     private int tileX;
     private int tileY;
     private int tileZ;
     private int useIndex;
+    private Tile[] renderedTiles;
+    private RenderTileInitiator initiator;
+    private float[] vertexLocations;
+    private Future[] prepareTilesFutures;
 
     public Tile(
             MainActivity mainActivity, OnPrepareSprite onSpriteReady,
             ExecutorService executorService, MyGLRenderer renderer,
-            int tileX, int tileY, int tileZ, float tileSize, int useIndex
+            int tileX, int tileY, int tileZ, float tileSize, int useIndex, RenderTileInitiator initiator, Tile[] renderedTiles,
+            Future[] prepareTilesFutures
     ) {
         this.tileSize = tileSize;
         this.cacheStorage = mainActivity.getCacheStorage();
@@ -42,6 +52,25 @@ public class Tile {
         this.tileY = tileY;
         this.tileZ = tileZ;
         this.useIndex = useIndex;
+        this.initiator = initiator;
+        this.renderedTiles = renderedTiles;
+        this.prepareTilesFutures = prepareTilesFutures;
+    }
+
+    public float[] getVertexLocations() {
+        return vertexLocations;
+    }
+
+    public int getUseIndex() {
+        return useIndex;
+    }
+
+    public Bitmap getBitmap() {
+        return bitmap;
+    }
+
+    public boolean getReady() {
+        return ready;
     }
 
     public int getX() {
@@ -57,11 +86,13 @@ public class Tile {
     }
 
     public void render() {
+        renderedTiles[useIndex] = this;
+
         // определяем где тайл будет в мировых координатах
         float topLeftX = tileX * tileSize;
         float topLeftY = -tileY * tileSize;
 
-        float[] vertexLocations = new float[] {
+        vertexLocations = new float[] {
                 topLeftX, topLeftY,
                 topLeftX, topLeftY - tileSize,
                 topLeftX + tileSize, topLeftY - tileSize,
@@ -72,6 +103,12 @@ public class Tile {
 
         // загружаем или достаем тайл из кэша
         PrepareTileRunnable prepareTileRunnable = new PrepareTileRunnable(cacheStorage, tileCoordinates, vertexLocations, onTilePreparedInternal);
-        executorService.submit(prepareTileRunnable);
+        Future<?> future = executorService.submit(prepareTileRunnable);
+        for(int i = 0; i < prepareTilesFutures.length; i++) {
+            if(prepareTilesFutures[i] == null) {
+                prepareTilesFutures[i] = future;
+                break;
+            }
+        }
     }
 }

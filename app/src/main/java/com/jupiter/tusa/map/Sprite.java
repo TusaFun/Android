@@ -64,6 +64,10 @@ public class Sprite {
             "gl_FragColor = (texture2D(u_Texture, v_TexCoordinate));" +
             "}";
 
+    public int getUseUnit() {
+        return useUnit;
+    }
+
     private float[] getSpriteVertexLocations() {
         return new float[] {
                 leftTopVertexX, leftTopVertexY,

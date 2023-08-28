@@ -36,7 +36,6 @@ public class PrepareTileRunnable implements Runnable {
 
             DiskLruCache.Snapshot snapshot = cacheStorage.getSnapshotFromDiskCache(imageKey);
             if(snapshot == null) {
-                Log.d("GL_ARTEM", "Load tile from network");
                 LoadTileRunnable loadTileRunnable = new LoadTileRunnable(params[0], params[1], params[2]);
                 loadTileRunnable.run();
                 byte[] result = loadTileRunnable.getResult();

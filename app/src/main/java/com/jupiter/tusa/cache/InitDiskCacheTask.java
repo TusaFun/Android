@@ -10,7 +10,8 @@ import java.io.IOException;
 public class InitDiskCacheTask extends AsyncTask<File, Void, Void> {
 
     private CacheStorage cacheStorage;
-    private static final int DISK_CACHE_SIZE = 1024 * 1024 * 10; // 10MB
+    private static final int useDiskMegabytes = 100;
+    private static final int DISK_CACHE_SIZE = 1024 * 1024 * useDiskMegabytes;
 
     public InitDiskCacheTask(CacheStorage cacheStorage) {
         this.cacheStorage = cacheStorage;
@@ -28,7 +29,6 @@ public class InitDiskCacheTask extends AsyncTask<File, Void, Void> {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
         }
 
         return null;

@@ -1,17 +1,11 @@
 package com.jupiter.tusa.cache;
 
-import android.content.Context;
 import android.graphics.Bitmap;
-import android.os.Environment;
-import android.util.Log;
 import android.util.LruCache;
-
 import com.jakewharton.disklrucache.DiskLruCache;
 import com.jupiter.tusa.MainActivity;
-
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 
 public class CacheStorage {
@@ -20,7 +14,6 @@ public class CacheStorage {
     private DiskLruCache diskLruCache;
     private final Object diskCacheLock = new Object();
     private boolean diskCacheStarting = true;
-    private static final int DISK_CACHE_SIZE = 1024 * 1024 * 10; // 10MB
     private static final String DISK_CACHE_SUBDIR = "thumbnails";
 
     private MainActivity mainActivity;
@@ -45,25 +38,25 @@ public class CacheStorage {
 
         final long maxMemory = Runtime.getRuntime().maxMemory();
         final int maxMemoryKilobytes = (int)(maxMemory / 1024);
-        Log.d("GL_ARTEM", "maxMemoryKilobytes " + maxMemoryKilobytes);
+        //Log.d("GL_ARTEM", "maxMemoryKilobytes " + maxMemoryKilobytes);
         memoryCache = new LruCache<String, Bitmap>((int) maxMemoryKilobytes) {
             @Override
             protected int sizeOf(String key, Bitmap bitmap) {
                 int byteSize = bitmap.getByteCount();
                 int useSize = byteSize / 1024;
-                Log.d("GL_ARTEM", String.format("Size of key(%s) %d", key, useSize));
-                return byteSize / 1024;
+                //Log.d("GL_ARTEM", String.format("Size of key(%s) %d", key, useSize));
+                return useSize;
             }
 
             @Override
             protected void entryRemoved(boolean evicted, String key, Bitmap oldValue, Bitmap newValue) {
-                Log.d("GL_ARTEM", "Entry removed " + key);
+                //Log.d("GL_ARTEM", "Entry removed " + key);
                 super.entryRemoved(evicted, key, oldValue, newValue);
             }
 
             @Override
             public void trimToSize(int maxSize) {
-                Log.d("GL_ARTEM", "Trim to size " + maxSize);
+                //Log.d("GL_ARTEM", "Trim to size " + maxSize);
                 super.trimToSize(maxSize);
             }
         };

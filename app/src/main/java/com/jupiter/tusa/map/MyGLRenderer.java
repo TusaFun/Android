@@ -55,8 +55,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         return shader;
     }
 
-    public void renderSprite(Sprite sprite, int index) {
-        sprites[index] = sprite;
+    public void renderSprite(Sprite sprite) {
+        sprites[sprite.getUseUnit()] = sprite;
         //Log.d("GL_ARTEM", "Render index = " + free);
     }
 
@@ -119,6 +119,6 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         Matrix.multiplyMM(modelViewMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
 
         int[][][] viewTiles = myGlSurfaceView.calcViewTiles();
-        myGlSurfaceView.renderMap(viewTiles);
+        myGlSurfaceView.renderMap(viewTiles, RenderTileInitiator.CHANGE_SURFACE);
     }
 }
