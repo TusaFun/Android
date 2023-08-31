@@ -8,13 +8,10 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
-
 import androidx.annotation.NonNull;
-
 import com.jupiter.tusa.MainActivity;
 import com.jupiter.tusa.map.scale.MapScaleListener;
 import com.jupiter.tusa.utils.MathUtils;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -22,7 +19,8 @@ import java.util.concurrent.Future;
 public class MyGlSurfaceView extends GLSurfaceView {
     private final MyGLRenderer renderer;
     private MainActivity mainActivity;
-    private ExecutorService executorService = Executors.newFixedThreadPool(4);
+    private int executorPoolsAmount = 10;
+    private ExecutorService executorService = Executors.newFixedThreadPool(executorPoolsAmount);
 
     // Маштабирование карты
     private GestureDetector gestureDetector;
@@ -40,16 +38,21 @@ public class MyGlSurfaceView extends GLSurfaceView {
     private float useTileSize = determineTileSize();
 
     private Tile[] renderedTiles = new Tile[tilesAmount];
-    private Future[] prepareTilesFutures = new Future[10];
 
     // Перемещение карты
     private float previousX = 0f;
     private float previousY = 0f;
+    private int currentTileX = 0;
+    private int currentTileY = 0;
+    private int previousCurrentTileX = currentTileX;
+    private int previousCurrentTileY = currentTileY;
     private float currentMapX = 0;
     private float currentMapY = 0;
     private float moveStrong = 100f;
     private float maxScaleFactor = useTileSize;
     private float changeMapZDelta = maxScaleFactor / maxMapZ;
+    private CancellationMapAction previousUpdateMapZ = new CancellationMapAction();
+    private Future<?> renderMapFuture;
 
     public float getCurrentMapX() {
         return currentMapX;
@@ -67,6 +70,9 @@ public class MyGlSurfaceView extends GLSurfaceView {
     private OnPrepareSprite onSpriteReady = new OnPrepareSprite() {
         @Override
         public void ready(Bitmap bitmap, float[] vertexLocations, int useIndex, RenderTileInitiator initiator, Tile tile) {
+            if(tile.isCancelled())
+                return;
+
             queueEvent(new Runnable() {
                 @Override
                 public void run() {
@@ -78,91 +84,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
                     } else if(initiator == RenderTileInitiator.MOVE) {
                         renderTile(tile);
                     } else if(initiator == RenderTileInitiator.ZOOM_UP) {
-                        int renderedTileX = tile.getX();
-                        int renderedTileY = tile.getY();
-                        int renderedTileZ = tile.getZ();
-
-                        int renderedTopLeftX = renderedTileX;
-                        int renderedTopLeftY = renderedTileY;
-
-                        // сделать четным
-                        if(renderedTileX % 2 != 0) {
-                            renderedTopLeftX -= 1;
-                        }
-                        if(renderedTileY % 2 != 0) {
-                            renderedTopLeftY -= 1;
-                        }
-
-                        int renderedTopRightX = renderedTopLeftX + 1;
-                        int renderedTopRightY = renderedTopLeftY;
-
-                        int renderedBottomLeftX = renderedTopLeftX;
-                        int renderedBottomLeftY = renderedTopLeftY + 1;
-
-                        int renderedBottomRightX = renderedTopRightX;
-                        int renderedBottomRightY = renderedBottomLeftY;
-
-                        int previousTopLeftTileX = renderedTopLeftX / 2;
-                        int previousTopLeftTileY = renderedTopLeftY / 2;
-                        int previousZ = renderedTileZ - 1;
-
-                        boolean topLeftReady = false;
-                        boolean topRightReady = false;
-                        boolean bottomLeftReady = false;
-                        boolean bottomRightReady = false;
-
-                        Tile topLeft = null;
-                        Tile topRight = null;
-                        Tile bottomLeft = null;
-                        Tile bottomRight = null;
-                        int previousTileIndex = -1;
-
-                        for(int i = 0; i < renderedTiles.length; i++) {
-                            Tile tile = renderedTiles[i];
-                            if(tile == null)
-                                continue;
-                            if(tile.getX() == previousTopLeftTileX && tile.getY() == previousTopLeftTileY && tile.getZ() == previousZ) {
-                                previousTileIndex = i;
-                            }
-                            if(tile.getX() == renderedTopLeftX && tile.getY() == renderedTopLeftY && tile.getZ() == renderedTileZ) {
-                                topLeftReady = tile.getReady();
-                                topLeft = tile;
-                                if(!topLeftReady)
-                                    break;
-                            }
-
-                            if(tile.getX() == renderedBottomLeftX && tile.getY() == renderedBottomLeftY && tile.getZ() == renderedTileZ) {
-                                bottomLeftReady = tile.getReady();
-                                bottomLeft = tile;
-                                if(!bottomLeftReady)
-                                    break;
-                            }
-
-                            if(tile.getX() == renderedBottomRightX && tile.getY() == renderedBottomRightY && tile.getZ() == renderedTileZ) {
-                                bottomRightReady = tile.getReady();
-                                bottomRight = tile;
-                                if(!bottomRightReady)
-                                    break;
-                            }
-
-                            if(tile.getX() == renderedTopRightX && tile.getY() == renderedTopRightY && renderedTileZ == tile.getZ()) {
-                                topRightReady = tile.getReady();
-                                topRight = tile;
-                                if(!topRightReady)
-                                    break;
-                            }
-                        }
-
-                        if(topRightReady && bottomRightReady && bottomLeftReady && topLeftReady) {
-                            renderTile(topLeft);
-                            renderTile(topRight);
-                            renderTile(bottomLeft);
-                            renderTile(bottomRight);
-
-                            if(previousTileIndex != -1) {
-                                clearTile(previousTileIndex);
-                            }
-                        }
+                        renderTile(tile);
                     }
                 }
             });
@@ -171,7 +93,11 @@ public class MyGlSurfaceView extends GLSurfaceView {
     };
 
     private void clearTile(int index) {
-        renderedTiles[index] = null;
+        Tile tile = renderedTiles[index];
+        if(tile != null) {
+            tile.cancelLoadTile();
+            renderedTiles[index] = null;
+        }
         renderer.setNullPointerForSprite(index);
     }
 
@@ -200,7 +126,6 @@ public class MyGlSurfaceView extends GLSurfaceView {
             @Override
             public boolean onDoubleTap(@NonNull MotionEvent e) {
                 //int[][][] viewTiles = calcViewTiles();
-                //optimizeTiles(viewTiles);
                 disableRenderMap = false;
                 //requestRender();
                 return true;
@@ -213,6 +138,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
     public void renderMap(int[][][] viewTiles, RenderTileInitiator initiator) {
         if(disableRenderMap)
             return;
+
         Log.d("GL_ARTEM", "Render map");
 
         // Отрендрить тайлы которые должны быть видимы
@@ -226,6 +152,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
         for (int distance = 0; distance <= Math.max(rows, cols) / 2; distance++) {
             for (int row = centerRow - distance; row <= centerRow + distance; row++) {
                 for (int col = centerCol - distance; col <= centerCol + distance; col++) {
+
                     // Проверяем, что индексы находятся в пределах массива
                     if (row >= 0 && row < rows && col >= 0 && col < cols) {
                         int freeIndex = -1;
@@ -233,9 +160,6 @@ public class MyGlSurfaceView extends GLSurfaceView {
                         int tileX = tileCoordinates[0];
                         int tileY = tileCoordinates[1];
                         int tileZ = tileCoordinates[2];
-
-                        if(disableRenderMap)
-                            return;
 
                         // ищем этот тайл в отрендренных
                         boolean exist = false;
@@ -258,11 +182,12 @@ public class MyGlSurfaceView extends GLSurfaceView {
                             continue;
 
                         if(freeIndex == -1) {
-                            freeIndex = optimizeTiles(viewTiles);
+                            freeIndex = optimizeTilesForStaticZ(viewTiles);
+                            Log.w("GL_ARTEM", "Map was optimized from render!");
                         }
 
                         Tile tile = new Tile(mainActivity, onSpriteReady, executorService, renderer, tileX, tileY,
-                                mapZ, useTileSize, freeIndex, initiator, renderedTiles, prepareTilesFutures);
+                                mapZ, useTileSize, freeIndex, initiator, renderedTiles);
                         tile.render();
                     }
                 }
@@ -274,7 +199,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
         return (float) Math.pow(2, maxMapZ - mapZ);
     }
 
-    public int optimizeTiles(int[][][] viewTiles) {
+    public int optimizeTilesForStaticZ(int[][][] viewTiles) {
         int freeSpace = -1;
         // Выгрузить тайлы которые вне зоны видимости
         for(int i = 0; i < renderedTiles.length; i++) {
@@ -285,8 +210,8 @@ public class MyGlSurfaceView extends GLSurfaceView {
             int[] rightBottom = viewTiles[viewTiles.length - 1][viewTiles[0].length - 1];
             boolean xIsNotInBounds = renderedTile.getX() > rightBottom[0] || renderedTile.getX() < leftTop[0];
             boolean yIsNotInBounds = renderedTile.getY() > rightBottom[1] || renderedTile.getY() < leftTop[1];
-            boolean zIsNotInBounds = renderedTile.getZ() > mapZ + 1 || renderedTile.getZ() < mapZ - 1;
-            if(xIsNotInBounds || yIsNotInBounds) {
+            boolean zIsNotInBounds = renderedTile.getZ() != mapZ;
+            if(xIsNotInBounds || yIsNotInBounds || zIsNotInBounds) {
                 clearTile(i);
                 freeSpace = i;
             }
@@ -294,13 +219,13 @@ public class MyGlSurfaceView extends GLSurfaceView {
         }
 
         int freeSpaceCount = 0;
+        int freeIndex = -1;
         for(int i = 0; i < renderedTiles.length; i++) {
             if(renderedTiles[i] == null) {
                 freeSpaceCount++;
+                freeIndex = i;
             }
         }
-
-        disableRenderMap = true;
 
         Log.d("GL_ARTEM", "After optimization. Tile free places = " + freeSpaceCount);
         return freeSpace;
@@ -414,6 +339,14 @@ public class MyGlSurfaceView extends GLSurfaceView {
         return viewTiles;
     }
 
+    private void renderMap(RenderTileInitiator renderTileInitiator) {
+        if(renderMapFuture != null) {
+            renderMapFuture.cancel(false);
+        }
+        RenderMapRunnable renderMapRunnable = new RenderMapRunnable(this, renderTileInitiator);
+        renderMapFuture = executorService.submit(renderMapRunnable);
+    }
+
     public void updateMapZ(double scaleFactor) {
         int determinedMapZ = 0;
         float determineMoveStrong = 60;
@@ -488,29 +421,20 @@ public class MyGlSurfaceView extends GLSurfaceView {
         if(determinedMapZ != mapZ) {
             boolean up = determinedMapZ > mapZ;
             RenderTileInitiator initiator = up ? RenderTileInitiator.ZOOM_UP : RenderTileInitiator.ZOOM_DOWN;
-            // убираем все тайлы прошлого зума
-//            for(int i = 0; i < renderedTiles.length; i++) {
-//                Tile tile = renderedTiles[i];
-//                if(tile != null && tile.getZ() == mapZ) {
-//                    renderedTiles[i] = null;
-//                    renderer.setNullPointerForSprite(i);
-//                }
-//            }
+
+            // убираем все тайлы
+            for(int i = 0; i < renderedTiles.length; i++) {
+                Tile tile = renderedTiles[i];
+                if(tile != null) {
+                    clearTile(i);
+                }
+            }
 
             mapZ = determinedMapZ;
             useTileSize = determineTileSize();
             Log.d("GL_ARTEM", "New zoom " + mapZ);
 
-            // перестаем грузить все предыдущие тайлы
-            for(int i = 0; i < prepareTilesFutures.length; i++) {
-                if(prepareTilesFutures[i] != null) {
-                    prepareTilesFutures[i].cancel(true);
-                    prepareTilesFutures[i] = null;
-                }
-            }
-
-            int[][][] viewTiles = calcViewTiles();
-            renderMap(viewTiles, initiator);
+            renderMap(initiator);
         }
     }
 
@@ -527,6 +451,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
             double scaleFactor = mapScaleListener.getScaleFactor();
             renderer.setSeeMultiply(scaleFactor);
             updateMapZ(scaleFactor);
+            calcCurrentTilesXAndY();
         } else if(event.getAction() == MotionEvent.ACTION_MOVE){
             // Перемещение по карте
             float dx = previousX - x;
@@ -536,14 +461,17 @@ public class MyGlSurfaceView extends GLSurfaceView {
             dy *= moveStrong;
 
             double realMove = MathUtils.calculateVectorLength(dx, dy);
-            double realMoveLimit = moveStrong * 110;
+            double realMoveLimit = moveStrong * 200;
             //Log.d("GL_ARTEM", String.format("Real move = %.3f moveStrong = %.3f limit = %.3f", realMove, moveStrong, realMoveLimit));
             if(realMove < realMoveLimit) {
                 currentMapX += dx;
                 currentMapY -= dy;
 
-                int[][][] viewTiles = calcViewTiles();
-                renderMap(viewTiles, RenderTileInitiator.MOVE);
+                calcCurrentTilesXAndY();
+                //Log.d("GL_ARTEM", String.format("CurrentTileX = %d CurrentTileY = %d", currentTileX, currentTileY));
+                if(currentTileY != previousCurrentTileY || currentTileX != previousCurrentTileX) {
+                    renderMap(RenderTileInitiator.MOVE);
+                }
 
                 renderer.moveCameraHorizontally(currentMapX, currentMapY);
             }
@@ -566,10 +494,106 @@ public class MyGlSurfaceView extends GLSurfaceView {
         //float[] worldLocation = renderer.screenCoordinatesToWorldLocation(x, y);
         //Log.d("GL_ARTEM", String.format("World x = %.3f, y = %.3f", worldLocation[0], worldLocation[1]));
 
+        previousCurrentTileX = currentTileX;
+        previousCurrentTileY = currentTileY;
+
         previousX = x;
         previousY = y;
 
         requestRender();
         return true;
     }
+
+    private void calcCurrentTilesXAndY() {
+        currentTileX = (int)(currentMapX / useTileSize);
+        currentTileY = (int)Math.abs(currentMapY / useTileSize);
+    }
+
+//    private void zoom_up() {
+//        int renderedTileX = tile.getX();
+//        int renderedTileY = tile.getY();
+//        int renderedTileZ = tile.getZ();
+//
+//        int renderedTopLeftX = renderedTileX;
+//        int renderedTopLeftY = renderedTileY;
+//
+//        // сделать четным
+//        if(renderedTileX % 2 != 0) {
+//            renderedTopLeftX -= 1;
+//        }
+//        if(renderedTileY % 2 != 0) {
+//            renderedTopLeftY -= 1;
+//        }
+//
+//        int renderedTopRightX = renderedTopLeftX + 1;
+//        int renderedTopRightY = renderedTopLeftY;
+//
+//        int renderedBottomLeftX = renderedTopLeftX;
+//        int renderedBottomLeftY = renderedTopLeftY + 1;
+//
+//        int renderedBottomRightX = renderedTopRightX;
+//        int renderedBottomRightY = renderedBottomLeftY;
+//
+//        int previousTopLeftTileX = renderedTopLeftX / 2;
+//        int previousTopLeftTileY = renderedTopLeftY / 2;
+//        int previousZ = renderedTileZ - 1;
+//
+//        boolean topLeftReady = false;
+//        boolean topRightReady = false;
+//        boolean bottomLeftReady = false;
+//        boolean bottomRightReady = false;
+//
+//        Tile topLeft = null;
+//        Tile topRight = null;
+//        Tile bottomLeft = null;
+//        Tile bottomRight = null;
+//        int previousTileIndex = -1;
+//
+//        for(int i = 0; i < renderedTiles.length; i++) {
+//            Tile tile = renderedTiles[i];
+//            if(tile == null)
+//                continue;
+//            if(tile.getX() == previousTopLeftTileX && tile.getY() == previousTopLeftTileY && tile.getZ() == previousZ) {
+//                previousTileIndex = i;
+//            }
+//            if(tile.getX() == renderedTopLeftX && tile.getY() == renderedTopLeftY && tile.getZ() == renderedTileZ) {
+//                topLeftReady = tile.getReady();
+//                topLeft = tile;
+//                if(!topLeftReady)
+//                    break;
+//            }
+//
+//            if(tile.getX() == renderedBottomLeftX && tile.getY() == renderedBottomLeftY && tile.getZ() == renderedTileZ) {
+//                bottomLeftReady = tile.getReady();
+//                bottomLeft = tile;
+//                if(!bottomLeftReady)
+//                    break;
+//            }
+//
+//            if(tile.getX() == renderedBottomRightX && tile.getY() == renderedBottomRightY && tile.getZ() == renderedTileZ) {
+//                bottomRightReady = tile.getReady();
+//                bottomRight = tile;
+//                if(!bottomRightReady)
+//                    break;
+//            }
+//
+//            if(tile.getX() == renderedTopRightX && tile.getY() == renderedTopRightY && renderedTileZ == tile.getZ()) {
+//                topRightReady = tile.getReady();
+//                topRight = tile;
+//                if(!topRightReady)
+//                    break;
+//            }
+//        }
+//
+//        if(topRightReady && bottomRightReady && bottomLeftReady && topLeftReady) {
+//            renderTile(topLeft);
+//            renderTile(topRight);
+//            renderTile(bottomLeft);
+//            renderTile(bottomRight);
+//
+//            if(previousTileIndex != -1) {
+//                clearTile(previousTileIndex);
+//            }
+//        }
+//    }
 }

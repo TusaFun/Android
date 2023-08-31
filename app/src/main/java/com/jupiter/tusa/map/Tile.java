@@ -24,6 +24,7 @@ public class Tile {
     private MainActivity mainActivity;
     private MyGLRenderer renderer;
 
+    private Future<?> future;
     private Bitmap bitmap;
     private boolean ready = false;
     private float tileSize;
@@ -34,13 +35,11 @@ public class Tile {
     private Tile[] renderedTiles;
     private RenderTileInitiator initiator;
     private float[] vertexLocations;
-    private Future[] prepareTilesFutures;
 
     public Tile(
             MainActivity mainActivity, OnPrepareSprite onSpriteReady,
             ExecutorService executorService, MyGLRenderer renderer,
-            int tileX, int tileY, int tileZ, float tileSize, int useIndex, RenderTileInitiator initiator, Tile[] renderedTiles,
-            Future[] prepareTilesFutures
+            int tileX, int tileY, int tileZ, float tileSize, int useIndex, RenderTileInitiator initiator, Tile[] renderedTiles
     ) {
         this.tileSize = tileSize;
         this.cacheStorage = mainActivity.getCacheStorage();
@@ -54,11 +53,14 @@ public class Tile {
         this.useIndex = useIndex;
         this.initiator = initiator;
         this.renderedTiles = renderedTiles;
-        this.prepareTilesFutures = prepareTilesFutures;
     }
 
     public float[] getVertexLocations() {
         return vertexLocations;
+    }
+
+    public Future<?> getFuture() {
+        return future;
     }
 
     public int getUseIndex() {
@@ -85,6 +87,13 @@ public class Tile {
         return tileZ;
     }
 
+    public boolean isCancelled() { return future.isCancelled(); }
+
+    public void cancelLoadTile() {
+        if(future != null)
+            future.cancel(false);
+    }
+
     public void render() {
         renderedTiles[useIndex] = this;
 
@@ -103,12 +112,6 @@ public class Tile {
 
         // загружаем или достаем тайл из кэша
         PrepareTileRunnable prepareTileRunnable = new PrepareTileRunnable(cacheStorage, tileCoordinates, vertexLocations, onTilePreparedInternal);
-        Future<?> future = executorService.submit(prepareTileRunnable);
-        for(int i = 0; i < prepareTilesFutures.length; i++) {
-            if(prepareTilesFutures[i] == null) {
-                prepareTilesFutures[i] = future;
-                break;
-            }
-        }
+        future = executorService.submit(prepareTileRunnable);
     }
 }
