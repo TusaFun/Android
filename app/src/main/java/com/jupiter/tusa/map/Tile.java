@@ -26,6 +26,7 @@ public class Tile {
 
     private Future<?> future;
     private Bitmap bitmap;
+    private Sprite sprite;
     private boolean ready = false;
     private float tileSize;
     private int tileX;
@@ -35,11 +36,14 @@ public class Tile {
     private Tile[] renderedTiles;
     private RenderTileInitiator initiator;
     private float[] vertexLocations;
+    private int[][][] viewTiles;
 
     public Tile(
             MainActivity mainActivity, OnPrepareSprite onSpriteReady,
             ExecutorService executorService, MyGLRenderer renderer,
-            int tileX, int tileY, int tileZ, float tileSize, int useIndex, RenderTileInitiator initiator, Tile[] renderedTiles
+            int tileX, int tileY, int tileZ, float tileSize,
+            int useIndex, RenderTileInitiator initiator, Tile[] renderedTiles,
+            int[][][] viewTiles
     ) {
         this.tileSize = tileSize;
         this.cacheStorage = mainActivity.getCacheStorage();
@@ -53,11 +57,22 @@ public class Tile {
         this.useIndex = useIndex;
         this.initiator = initiator;
         this.renderedTiles = renderedTiles;
+        this.viewTiles = viewTiles;
+    }
+
+    public Sprite getSprite() {
+        return sprite;
+    }
+
+    public void setSprite(Sprite sprite) {
+        this.sprite = sprite;
     }
 
     public float[] getVertexLocations() {
         return vertexLocations;
     }
+
+    public int[][][] getViewTiles() {return viewTiles; }
 
     public Future<?> getFuture() {
         return future;

@@ -1,10 +1,24 @@
 package com.jupiter.tusa.map;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+
 import com.jupiter.tusa.MainActivity;
+import com.jupiter.tusa.R;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import javax.microedition.khronos.opengles.GL10;
 
 public class MyGLRenderer implements GLSurfaceView.Renderer {
@@ -18,6 +32,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     private int height;
 
     private final Sprite[] sprites;
+    private Sprite[] fadeInSprites;
 
     private final float[] modelViewMatrix = new float[16];
     private final float[] projectionMatrix = new float[16];
@@ -102,6 +117,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     @Override
     public void onSurfaceCreated(GL10 gl, javax.microedition.khronos.egl.EGLConfig config) {
         GLES20.glClearColor(0.95f, 0.95f, 1.0f, 1.0f);
+        GLES20.glEnable(GLES20.GL_BLEND);
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
     }
 
     @Override
@@ -118,7 +135,11 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         Matrix.orthoM(projectionMatrix, 0, -seeHorizontal, seeHorizontal, -seeVertical, seeVertical, 6, 7f);
         Matrix.multiplyMM(modelViewMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
 
-        int[][][] viewTiles = myGlSurfaceView.calcViewTiles();
-        myGlSurfaceView.renderMap(viewTiles, RenderTileInitiator.CHANGE_SURFACE);
+        myGlSurfaceView.renderMap(RenderTileInitiator.CHANGE_SURFACE);
+
+        int[] maxTextureUnits = new int[1];
+        GLES20.glGetIntegerv(GLES20.GL_MAX_TEXTURE_IMAGE_UNITS, maxTextureUnits, 0);
+        int maxTextureUnitsValue = maxTextureUnits[0];
+        Log.d("GL_ARTEM", "Max texture units value = " + maxTextureUnitsValue);
     }
 }

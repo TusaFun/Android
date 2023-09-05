@@ -5,12 +5,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
-
 import com.jupiter.tusa.R;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
@@ -28,6 +25,7 @@ public class Sprite {
     private int mColorHandle;
     private int mMVPMatrixHandle;
     private int useUnit;
+    private float alpha = 0f;
 
     // coordinates
     private float leftTopVertexX;
@@ -58,14 +56,23 @@ public class Sprite {
     private final String fragmentShaderCode =
             "precision highp float;" +
             "uniform vec4 vColor;" +
+            "uniform float uAlpha;" +
             "uniform sampler2D u_Texture;" +
             "varying vec2 v_TexCoordinate;" +
             "void main() {" +
-            "gl_FragColor = (texture2D(u_Texture, v_TexCoordinate));" +
+            "gl_FragColor = vec4(texture2D(u_Texture, v_TexCoordinate).rgb, uAlpha);" +
             "}";
 
     public int getUseUnit() {
         return useUnit;
+    }
+
+    public float getAlpha() {
+        return alpha;
+    }
+
+    public void setAlpha(float alpha) {
+        this.alpha = alpha;
     }
 
     private float[] getSpriteVertexLocations() {
@@ -129,7 +136,6 @@ public class Sprite {
 
         //Texture Code
         GLES20.glBindAttribLocation(shaderProgram, 0, "a_TexCoordinate");
-
         GLES20.glLinkProgram(shaderProgram);
 
         //Load the texture
@@ -140,6 +146,9 @@ public class Sprite {
     {
         //Add program to OpenGL ES Environment
         GLES20.glUseProgram(shaderProgram);
+
+        int alphaParameter = GLES20.glGetUniformLocation(shaderProgram, "uAlpha");
+        GLES20.glUniform1f(alphaParameter, alpha);
 
         //Get handle to vertex shader's vPosition member
         mPositionHandle = GLES20.glGetAttribLocation(shaderProgram, "vPosition");

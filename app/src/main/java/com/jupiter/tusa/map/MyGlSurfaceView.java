@@ -3,6 +3,7 @@ package com.jupiter.tusa.map;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.opengl.GLSurfaceView;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -12,6 +13,10 @@ import androidx.annotation.NonNull;
 import com.jupiter.tusa.MainActivity;
 import com.jupiter.tusa.map.scale.MapScaleListener;
 import com.jupiter.tusa.utils.MathUtils;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -19,7 +24,7 @@ import java.util.concurrent.Future;
 public class MyGlSurfaceView extends GLSurfaceView {
     private final MyGLRenderer renderer;
     private MainActivity mainActivity;
-    private int executorPoolsAmount = 10;
+    private int executorPoolsAmount = 2;
     private ExecutorService executorService = Executors.newFixedThreadPool(executorPoolsAmount);
 
     // Маштабирование карты
@@ -39,6 +44,9 @@ public class MyGlSurfaceView extends GLSurfaceView {
 
     private Tile[] renderedTiles = new Tile[tilesAmount];
 
+    // animations
+    private List<Tile> fadeOutTiles = new ArrayList<Tile>();
+
     // Перемещение карты
     private float previousX = 0f;
     private float previousY = 0f;
@@ -50,7 +58,6 @@ public class MyGlSurfaceView extends GLSurfaceView {
     private float currentMapY = 0;
     private float moveStrong = 100f;
     private float maxScaleFactor = useTileSize;
-    private float changeMapZDelta = maxScaleFactor / maxMapZ;
     private CancellationMapAction previousUpdateMapZ = new CancellationMapAction();
     private Future<?> renderMapFuture;
 
@@ -108,10 +115,10 @@ public class MyGlSurfaceView extends GLSurfaceView {
                 tile.getUseIndex(),
                 tile.getVertexLocations()
         );
+        tile.setSprite(sprite);
+        fadeOutTiles.add(tile);
         renderer.renderSprite(sprite);
     }
-
-
 
     public MyGlSurfaceView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
@@ -125,14 +132,39 @@ public class MyGlSurfaceView extends GLSurfaceView {
         gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onDoubleTap(@NonNull MotionEvent e) {
-                //int[][][] viewTiles = calcViewTiles();
-                disableRenderMap = false;
-                //requestRender();
                 return true;
             }
         });
 
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+
+        // Анимации
+        Handler animationHandler = new Handler();
+        long delayMillis = 60;
+        animationHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                // Sprites fade out animation
+                Iterator<Tile> iterator = fadeOutTiles.iterator();
+                while(iterator.hasNext()) {
+                    Tile fadeOutTile = iterator.next();
+                    Sprite sprite = fadeOutTile.getSprite();
+                    if(sprite == null)
+                        continue;
+                    float currentAlpha = sprite.getAlpha();
+                    if(currentAlpha >= 1) {
+                        iterator.remove();
+                        continue;
+                    }
+                    float deltaAlpha = (float) delayMillis / 1000;
+                    sprite.setAlpha(currentAlpha + deltaAlpha);
+                }
+
+                requestRender();
+                animationHandler.postDelayed(this, delayMillis);
+            }
+        });
+
     }
 
     public void renderMap(int[][][] viewTiles, RenderTileInitiator initiator) {
@@ -182,12 +214,12 @@ public class MyGlSurfaceView extends GLSurfaceView {
                             continue;
 
                         if(freeIndex == -1) {
-                            freeIndex = optimizeTilesForStaticZ(viewTiles);
-                            Log.w("GL_ARTEM", "Map was optimized from render!");
+                            Log.w("GL_ARTEM", "Map was optimized in render map! It is bad :/");
+                            continue;
                         }
 
                         Tile tile = new Tile(mainActivity, onSpriteReady, executorService, renderer, tileX, tileY,
-                                mapZ, useTileSize, freeIndex, initiator, renderedTiles);
+                                mapZ, useTileSize, freeIndex, initiator, renderedTiles, viewTiles);
                         tile.render();
                     }
                 }
@@ -199,8 +231,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
         return (float) Math.pow(2, maxMapZ - mapZ);
     }
 
-    public int optimizeTilesForStaticZ(int[][][] viewTiles) {
-        int freeSpace = -1;
+    public void optimizeTilesForStaticZ(int[][][] viewTiles) {
         // Выгрузить тайлы которые вне зоны видимости
         for(int i = 0; i < renderedTiles.length; i++) {
             Tile renderedTile = renderedTiles[i];
@@ -213,22 +244,8 @@ public class MyGlSurfaceView extends GLSurfaceView {
             boolean zIsNotInBounds = renderedTile.getZ() != mapZ;
             if(xIsNotInBounds || yIsNotInBounds || zIsNotInBounds) {
                 clearTile(i);
-                freeSpace = i;
-            }
-
-        }
-
-        int freeSpaceCount = 0;
-        int freeIndex = -1;
-        for(int i = 0; i < renderedTiles.length; i++) {
-            if(renderedTiles[i] == null) {
-                freeSpaceCount++;
-                freeIndex = i;
             }
         }
-
-        Log.d("GL_ARTEM", "After optimization. Tile free places = " + freeSpaceCount);
-        return freeSpace;
     }
 
     // тут определяется видимая область
@@ -339,7 +356,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
         return viewTiles;
     }
 
-    private void renderMap(RenderTileInitiator renderTileInitiator) {
+    public void renderMap(RenderTileInitiator renderTileInitiator) {
         if(renderMapFuture != null) {
             renderMapFuture.cancel(false);
         }
@@ -421,7 +438,6 @@ public class MyGlSurfaceView extends GLSurfaceView {
         if(determinedMapZ != mapZ) {
             boolean up = determinedMapZ > mapZ;
             RenderTileInitiator initiator = up ? RenderTileInitiator.ZOOM_UP : RenderTileInitiator.ZOOM_DOWN;
-
             // убираем все тайлы
             for(int i = 0; i < renderedTiles.length; i++) {
                 Tile tile = renderedTiles[i];
@@ -461,7 +477,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
             dy *= moveStrong;
 
             double realMove = MathUtils.calculateVectorLength(dx, dy);
-            double realMoveLimit = moveStrong * 200;
+            double realMoveLimit = moveStrong * 300;
             //Log.d("GL_ARTEM", String.format("Real move = %.3f moveStrong = %.3f limit = %.3f", realMove, moveStrong, realMoveLimit));
             if(realMove < realMoveLimit) {
                 currentMapX += dx;
@@ -470,29 +486,12 @@ public class MyGlSurfaceView extends GLSurfaceView {
                 calcCurrentTilesXAndY();
                 //Log.d("GL_ARTEM", String.format("CurrentTileX = %d CurrentTileY = %d", currentTileX, currentTileY));
                 if(currentTileY != previousCurrentTileY || currentTileX != previousCurrentTileX) {
-                    renderMap(RenderTileInitiator.MOVE);
+                   renderMap(RenderTileInitiator.MOVE);
                 }
 
                 renderer.moveCameraHorizontally(currentMapX, currentMapY);
             }
-
-
-//            Log.d("GL_ARTEM", "Массив");
-//            int[][][] viewTiles = calcViewTiles();
-//            for (int i = 0; i < viewTiles.length; i++) {
-//                StringBuilder rowStringBuilder = new StringBuilder();
-//                for (int j = 0; j < viewTiles[i].length; j++) {
-//                    int[] coordinates = viewTiles[i][j];
-//                    rowStringBuilder.append(String.format("(%d, %d)", coordinates[0], coordinates[1]) + ", ");
-//                }
-//                Log.d("GL_ARTEM", rowStringBuilder.toString());
-//            }
-
-            //Log.d("GL_ARTEM", "curreentMapX = " + currentMapX + " currentMapY = " + currentMapY);
         }
-
-        //float[] worldLocation = renderer.screenCoordinatesToWorldLocation(x, y);
-        //Log.d("GL_ARTEM", String.format("World x = %.3f, y = %.3f", worldLocation[0], worldLocation[1]));
 
         previousCurrentTileX = currentTileX;
         previousCurrentTileY = currentTileY;
@@ -508,92 +507,4 @@ public class MyGlSurfaceView extends GLSurfaceView {
         currentTileX = (int)(currentMapX / useTileSize);
         currentTileY = (int)Math.abs(currentMapY / useTileSize);
     }
-
-//    private void zoom_up() {
-//        int renderedTileX = tile.getX();
-//        int renderedTileY = tile.getY();
-//        int renderedTileZ = tile.getZ();
-//
-//        int renderedTopLeftX = renderedTileX;
-//        int renderedTopLeftY = renderedTileY;
-//
-//        // сделать четным
-//        if(renderedTileX % 2 != 0) {
-//            renderedTopLeftX -= 1;
-//        }
-//        if(renderedTileY % 2 != 0) {
-//            renderedTopLeftY -= 1;
-//        }
-//
-//        int renderedTopRightX = renderedTopLeftX + 1;
-//        int renderedTopRightY = renderedTopLeftY;
-//
-//        int renderedBottomLeftX = renderedTopLeftX;
-//        int renderedBottomLeftY = renderedTopLeftY + 1;
-//
-//        int renderedBottomRightX = renderedTopRightX;
-//        int renderedBottomRightY = renderedBottomLeftY;
-//
-//        int previousTopLeftTileX = renderedTopLeftX / 2;
-//        int previousTopLeftTileY = renderedTopLeftY / 2;
-//        int previousZ = renderedTileZ - 1;
-//
-//        boolean topLeftReady = false;
-//        boolean topRightReady = false;
-//        boolean bottomLeftReady = false;
-//        boolean bottomRightReady = false;
-//
-//        Tile topLeft = null;
-//        Tile topRight = null;
-//        Tile bottomLeft = null;
-//        Tile bottomRight = null;
-//        int previousTileIndex = -1;
-//
-//        for(int i = 0; i < renderedTiles.length; i++) {
-//            Tile tile = renderedTiles[i];
-//            if(tile == null)
-//                continue;
-//            if(tile.getX() == previousTopLeftTileX && tile.getY() == previousTopLeftTileY && tile.getZ() == previousZ) {
-//                previousTileIndex = i;
-//            }
-//            if(tile.getX() == renderedTopLeftX && tile.getY() == renderedTopLeftY && tile.getZ() == renderedTileZ) {
-//                topLeftReady = tile.getReady();
-//                topLeft = tile;
-//                if(!topLeftReady)
-//                    break;
-//            }
-//
-//            if(tile.getX() == renderedBottomLeftX && tile.getY() == renderedBottomLeftY && tile.getZ() == renderedTileZ) {
-//                bottomLeftReady = tile.getReady();
-//                bottomLeft = tile;
-//                if(!bottomLeftReady)
-//                    break;
-//            }
-//
-//            if(tile.getX() == renderedBottomRightX && tile.getY() == renderedBottomRightY && tile.getZ() == renderedTileZ) {
-//                bottomRightReady = tile.getReady();
-//                bottomRight = tile;
-//                if(!bottomRightReady)
-//                    break;
-//            }
-//
-//            if(tile.getX() == renderedTopRightX && tile.getY() == renderedTopRightY && renderedTileZ == tile.getZ()) {
-//                topRightReady = tile.getReady();
-//                topRight = tile;
-//                if(!topRightReady)
-//                    break;
-//            }
-//        }
-//
-//        if(topRightReady && bottomRightReady && bottomLeftReady && topLeftReady) {
-//            renderTile(topLeft);
-//            renderTile(topRight);
-//            renderTile(bottomLeft);
-//            renderTile(bottomRight);
-//
-//            if(previousTileIndex != -1) {
-//                clearTile(previousTileIndex);
-//            }
-//        }
-//    }
 }
