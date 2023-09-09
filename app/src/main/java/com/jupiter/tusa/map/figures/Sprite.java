@@ -1,4 +1,4 @@
-package com.jupiter.tusa.map;
+package com.jupiter.tusa.map.figures;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import com.jupiter.tusa.R;
+import com.jupiter.tusa.map.MyGLRenderer;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -24,8 +26,8 @@ public class Sprite {
     private int mPositionHandle;
     private int mColorHandle;
     private int mMVPMatrixHandle;
-    private int useUnit;
     private float alpha = 0f;
+    private Bitmap bitmap;
 
     // coordinates
     private float leftTopVertexX;
@@ -63,10 +65,6 @@ public class Sprite {
             "gl_FragColor = vec4(texture2D(u_Texture, v_TexCoordinate).rgb, uAlpha);" +
             "}";
 
-    public int getUseUnit() {
-        return useUnit;
-    }
-
     public float getAlpha() {
         return alpha;
     }
@@ -84,7 +82,8 @@ public class Sprite {
         };
     }
 
-    public Sprite(Context context, Bitmap bitmap, int useUnit, float[] coordinates) {
+    public Sprite(Context context, Bitmap bitmap, float[] coordinates) {
+        this.bitmap = bitmap;
         leftTopVertexX = coordinates[0];
         leftTopVertexY = coordinates[1];
         leftBottomVertexX = coordinates[2];
@@ -94,7 +93,6 @@ public class Sprite {
         rightTopVertexX = coordinates[6];
         rightTopVertexY = coordinates[7];
 
-        this.useUnit = useUnit;
         mActivityContext = context;
 
         float[] spriteVertexLocations = getSpriteVertexLocations();
@@ -137,8 +135,6 @@ public class Sprite {
         //Texture Code
         GLES20.glBindAttribLocation(shaderProgram, 0, "a_TexCoordinate");
         GLES20.glLinkProgram(shaderProgram);
-
-        //Load the texture
         mTextureDataHandle = loadTexture(mActivityContext, bitmap);
     }
 
@@ -169,8 +165,11 @@ public class Sprite {
         mTextureUniformHandle = GLES20.glGetUniformLocation(shaderProgram, "u_Texture");
         mTextureCoordinateHandle = GLES20.glGetAttribLocation(shaderProgram, "a_TexCoordinate");
 
-        // Tell the texture uniform sampler to use this texture in the shader by binding to texture unit 0.
-        GLES20.glUniform1i(mTextureUniformHandle, useUnit);
+        // Используем юнит 0
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        // Выбираем текстуру mTextureDataHandle. она применяется к юниту 0
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureDataHandle);
+        GLES20.glUniform1i(mTextureUniformHandle, 0);
 
         //Pass in the texture coordinate information
         mCubeTextureCoordinates.position(0);
@@ -201,7 +200,6 @@ public class Sprite {
                 bitmap = BitmapFactory.decodeResource(context.getResources(), R.drawable.bricks, options);
             }
 
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + useUnit);
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0]);
 
             // Set filtering

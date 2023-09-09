@@ -11,6 +11,7 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import androidx.annotation.NonNull;
 import com.jupiter.tusa.MainActivity;
+import com.jupiter.tusa.map.figures.Sprite;
 import com.jupiter.tusa.map.scale.MapScaleListener;
 import com.jupiter.tusa.utils.MathUtils;
 
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class MyGlSurfaceView extends GLSurfaceView {
     private final MyGLRenderer renderer;
@@ -31,21 +33,13 @@ public class MyGlSurfaceView extends GLSurfaceView {
     private GestureDetector gestureDetector;
     private ScaleGestureDetector mScaleDetector;
     private MapScaleListener mapScaleListener;
-
-    // тест
-    boolean disableRenderMap = false;
+    private int mapZ = 0;
+    private int maxMapZ = 18;
 
     // Отрисовка карты
     final int tilesAmount = 80;
-    private int mapZ = 0;
-    private int maxMapZ = 18;
-    private float maxBottomRightZoneWorldLength = (float) Math.pow(2, maxMapZ);
+    private final float maxBottomRightZoneWorldLength = (float) Math.pow(2, maxMapZ);
     private float useTileSize = determineTileSize();
-
-    private Tile[] renderedTiles = new Tile[tilesAmount];
-
-    // animations
-    private List<Tile> fadeOutTiles = new ArrayList<Tile>();
 
     // Перемещение карты
     private float previousX = 0f;
@@ -58,9 +52,17 @@ public class MyGlSurfaceView extends GLSurfaceView {
     private float currentMapY = 0;
     private float moveStrong = 100f;
     private float maxScaleFactor = useTileSize;
-    private CancellationMapAction previousUpdateMapZ = new CancellationMapAction();
     private Future<?> renderMapFuture;
 
+    // регрессии
+    private double mapZRegressionParamOne = 18.86230239;
+    private double mapZRegressionParamTwo = 1.44971501;
+
+    private final Tile[] renderedTiles = new Tile[tilesAmount];
+
+    // animations
+    private final List<Tile> fadeOutTiles = new ArrayList<Tile>();
+    private final ReentrantLock fadeOutTilesLock = new ReentrantLock();
     public float getCurrentMapX() {
         return currentMapX;
     }
@@ -104,19 +106,20 @@ public class MyGlSurfaceView extends GLSurfaceView {
         if(tile != null) {
             tile.cancelLoadTile();
             renderedTiles[index] = null;
+            renderer.removeSprite(tile.getSprite());
         }
-        renderer.setNullPointerForSprite(index);
     }
 
     private void renderTile(Tile tile) {
         Sprite sprite = new Sprite(
                 mainActivity,
                 tile.getBitmap(),
-                tile.getUseIndex(),
                 tile.getVertexLocations()
         );
         tile.setSprite(sprite);
+        fadeOutTilesLock.lock();
         fadeOutTiles.add(tile);
+        fadeOutTilesLock.unlock();
         renderer.renderSprite(sprite);
     }
 
@@ -138,6 +141,9 @@ public class MyGlSurfaceView extends GLSurfaceView {
 
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
+        initCameraZ(11);
+        initCameraLatLng(55.7558f, 37.6173f);
+
         // Анимации
         Handler animationHandler = new Handler();
         long delayMillis = 60;
@@ -145,6 +151,8 @@ public class MyGlSurfaceView extends GLSurfaceView {
             @Override
             public void run() {
                 // Sprites fade out animation
+
+                fadeOutTilesLock.lock();
                 Iterator<Tile> iterator = fadeOutTiles.iterator();
                 while(iterator.hasNext()) {
                     Tile fadeOutTile = iterator.next();
@@ -159,6 +167,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
                     float deltaAlpha = (float) delayMillis / 1000;
                     sprite.setAlpha(currentAlpha + deltaAlpha);
                 }
+                fadeOutTilesLock.unlock();
 
                 requestRender();
                 animationHandler.postDelayed(this, delayMillis);
@@ -168,9 +177,6 @@ public class MyGlSurfaceView extends GLSurfaceView {
     }
 
     public void renderMap(int[][][] viewTiles, RenderTileInitiator initiator) {
-        if(disableRenderMap)
-            return;
-
         Log.d("GL_ARTEM", "Render map");
 
         // Отрендрить тайлы которые должны быть видимы
@@ -364,7 +370,74 @@ public class MyGlSurfaceView extends GLSurfaceView {
         renderMapFuture = executorService.submit(renderMapRunnable);
     }
 
-    public void updateMapZ(double scaleFactor) {
+    public void initCameraZ(int z) {
+        float scaleFactor = calcScaleFactorByZ(z);
+        mapScaleListener.setScaleFactor(scaleFactor);
+        mapZ = calcMapZByScaleFactor(scaleFactor);
+        moveStrong = calcMoveStrongByScaleFactor(scaleFactor);
+        useTileSize = determineTileSize();
+    }
+
+    public void initCameraLatLng(float latitude, float longitude) {
+        float[] xAndY = latLngToXAndY(latitude, longitude);
+        currentMapX = xAndY[0];
+        currentMapY = xAndY[1];
+    }
+
+    public void setCameraLatLng(float latitude, float longitude) {
+        float[] xAndY = latLngToXAndY(latitude, longitude);
+        currentMapX = xAndY[0];
+        currentMapY = xAndY[1];
+
+        actionsAfterMove();
+    }
+
+    private void actionsAfterMove() {
+        // Для оптимизации рендринга
+        calcCurrentTilesXAndY();
+        if(currentTileY != previousCurrentTileY || currentTileX != previousCurrentTileX) {
+            renderMap(RenderTileInitiator.MOVE);
+        }
+
+        renderer.moveCameraHorizontally(currentMapX, currentMapY);
+    }
+
+    public float[] latLngToXAndY(float latitude, float longitude) {
+        float latR = (float) (latitude * Math.PI / 180);
+        float lngR = (float) (longitude * Math.PI / 180);
+        return latRLongRToXAndY(latR, lngR);
+    }
+
+    public float[] latRLongRToXAndY(float latitudeR, float longitudeR) {
+        float[] xAndYFactors = latRLngRToXAndYFactors(latitudeR, longitudeR);
+        float xf = xAndYFactors[0];
+        float yf = xAndYFactors[1];
+        float x = (xf + 1) / 2;
+        float y = (1 - yf) / 2;
+        xAndYFactors[0] = x * maxBottomRightZoneWorldLength;
+        xAndYFactors[1] = y * -maxBottomRightZoneWorldLength;
+        return xAndYFactors;
+    }
+
+    public float[] latRLngRToXAndYFactors(float latitudeR, float longitudeR) {
+        double radius = 1 / Math.PI;
+        //float x = (maxBottomRightZoneWorldLength * longitudeR + maxBottomRightZoneWorldLength) / 2;
+        double x = radius * longitudeR;
+        double y = radius * Math.log( Math.tan(Math.PI / 4 + latitudeR / 2) );
+        return new float[] { (float)x, (float)y};
+    }
+
+    public float[] calcCurrentLatLongInRadians() {
+        float y = currentMapY * 2 + maxBottomRightZoneWorldLength;
+        float x = currentMapX * 2 - maxBottomRightZoneWorldLength;
+        float longitudeFactor = x / maxBottomRightZoneWorldLength;
+
+        float longitude = (float) (longitudeFactor * Math.PI);
+        float latitude  = (float) ((2 * Math.atan(Math.exp(y / maxBottomRightZoneWorldLength * Math.PI)) - Math.PI / 2));
+        return new float[] { latitude, longitude };
+    }
+
+    public void updateMapZ(float scaleFactor) {
         int determinedMapZ = 0;
         float determineMoveStrong = 60;
 
@@ -425,9 +498,9 @@ public class MyGlSurfaceView extends GLSurfaceView {
 //        }
 
         // логарифмическая регрессия
-        determinedMapZ = (int)(18.86230239 - 1.44971501 * Math.log(scaleFactor));
+        determinedMapZ = calcMapZByScaleFactor(scaleFactor);
         // степенная регрессия
-        determineMoveStrong = (float)(0.00089951 * Math.pow(scaleFactor, 0.94762810));
+        determineMoveStrong = calcMoveStrongByScaleFactor(scaleFactor);
 
         //Log.d("GL_ARTEM", "Scale factor = " + scaleFactor + " mapZ = " + determinedMapZ);
 
@@ -454,6 +527,18 @@ public class MyGlSurfaceView extends GLSurfaceView {
         }
     }
 
+    private int calcMapZByScaleFactor(double scaleFactor) {
+        return (int)(mapZRegressionParamOne - mapZRegressionParamTwo * Math.log(scaleFactor));
+    }
+
+    private float calcMoveStrongByScaleFactor(double scaleFactor) {
+        return (float)(0.00089951 * Math.pow(scaleFactor, 0.94762810));
+    }
+
+    private float calcScaleFactorByZ(int z) {
+        return (float) Math.exp((mapZRegressionParamOne - z) / mapZRegressionParamTwo);
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         mScaleDetector.onTouchEvent(event);
@@ -464,9 +549,10 @@ public class MyGlSurfaceView extends GLSurfaceView {
 
         if(event.getPointerCount() == 2) {
             // Маштабирование карты
-            double scaleFactor = mapScaleListener.getScaleFactor();
+            float scaleFactor = mapScaleListener.getScaleFactor();
             renderer.setSeeMultiply(scaleFactor);
             updateMapZ(scaleFactor);
+            // подсчет нужен для оптимизации рендринга
             calcCurrentTilesXAndY();
         } else if(event.getAction() == MotionEvent.ACTION_MOVE){
             // Перемещение по карте
@@ -482,14 +568,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
             if(realMove < realMoveLimit) {
                 currentMapX += dx;
                 currentMapY -= dy;
-
-                calcCurrentTilesXAndY();
-                //Log.d("GL_ARTEM", String.format("CurrentTileX = %d CurrentTileY = %d", currentTileX, currentTileY));
-                if(currentTileY != previousCurrentTileY || currentTileX != previousCurrentTileX) {
-                   renderMap(RenderTileInitiator.MOVE);
-                }
-
-                renderer.moveCameraHorizontally(currentMapX, currentMapY);
+                actionsAfterMove();
             }
         }
 

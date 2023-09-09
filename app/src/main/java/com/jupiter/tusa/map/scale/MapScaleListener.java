@@ -8,6 +8,10 @@ public class MapScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureL
     private float maxScale = 5.0f;
     private float minScale = 0.1f;
 
+    public void setScaleFactor(float scaleFactor) {
+        this.mScaleFactor = scaleFactor;
+    }
+
     public float getScaleFactor() {
         return mScaleFactor;
     }

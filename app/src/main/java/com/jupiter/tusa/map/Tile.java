@@ -3,8 +3,8 @@ package com.jupiter.tusa.map;
 import android.graphics.Bitmap;
 import com.jupiter.tusa.MainActivity;
 import com.jupiter.tusa.cache.CacheStorage;
+import com.jupiter.tusa.map.figures.Sprite;
 
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 

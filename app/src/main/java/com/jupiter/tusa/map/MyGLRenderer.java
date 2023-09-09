@@ -1,24 +1,15 @@
 package com.jupiter.tusa.map;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.animation.ValueAnimator;
 import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
-
-import androidx.annotation.NonNull;
-
 import com.jupiter.tusa.MainActivity;
-import com.jupiter.tusa.R;
+import com.jupiter.tusa.map.figures.Sprite;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
+import java.util.ArrayList;
+import java.util.List;
 import javax.microedition.khronos.opengles.GL10;
 
 public class MyGLRenderer implements GLSurfaceView.Renderer {
@@ -31,8 +22,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     private int width;
     private int height;
 
-    private final Sprite[] sprites;
-    private Sprite[] fadeInSprites;
+    private final List<Sprite> sprites = new ArrayList();
 
     private final float[] modelViewMatrix = new float[16];
     private final float[] projectionMatrix = new float[16];
@@ -54,7 +44,6 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         this.context = context;
         this.mainActivity = (MainActivity) context;
         this.myGlSurfaceView = myGlSurfaceView;
-        this.sprites = new Sprite[myGlSurfaceView.tilesAmount];
     }
 
     public void setSeeMultiply(double seeMultiply) {
@@ -71,12 +60,11 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     }
 
     public void renderSprite(Sprite sprite) {
-        sprites[sprite.getUseUnit()] = sprite;
-        //Log.d("GL_ARTEM", "Render index = " + free);
+        sprites.add(sprite);
     }
 
-    public void setNullPointerForSprite(int index) {
-        sprites[index] = null;
+    public void removeSprite(Sprite sprite) {
+        sprites.remove(sprite);
     }
 
     public void moveCameraHorizontally(float x, float y) {
@@ -104,13 +92,11 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     @Override
     public void onDrawFrame(GL10 unused) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-
         Matrix.multiplyMM(modelViewMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
-        for(int i = 0; i < sprites.length; i++) {
-            Sprite sprite = sprites[i];
-            if(sprite != null) {
-                sprite.draw(modelViewMatrix);
-            }
+
+
+        for(int i = 0; i < sprites.size(); i++) {
+            sprites.get(i).draw(modelViewMatrix);
         }
     }
 
@@ -119,6 +105,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         GLES20.glClearColor(0.95f, 0.95f, 1.0f, 1.0f);
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+
+
     }
 
     @Override

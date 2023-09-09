@@ -1,6 +1,8 @@
-package com.jupiter.tusa.map;
+package com.jupiter.tusa.map.figures;
 
 import android.opengl.GLES20;
+
+import com.jupiter.tusa.map.MyGLRenderer;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
