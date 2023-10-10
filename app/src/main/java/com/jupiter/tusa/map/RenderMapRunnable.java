@@ -2,10 +2,10 @@ package com.jupiter.tusa.map;
 
 
 public class RenderMapRunnable implements Runnable {
-    private MyGlSurfaceView myGlSurfaceView;
+    private MapGlSurfaceView myGlSurfaceView;
     private RenderTileInitiator initiator;
 
-    public RenderMapRunnable(MyGlSurfaceView myGlSurfaceView,
+    public RenderMapRunnable(MapGlSurfaceView myGlSurfaceView,
                              RenderTileInitiator initiator
     ) {
         this.myGlSurfaceView = myGlSurfaceView;

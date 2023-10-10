@@ -1,17 +1,12 @@
 package com.jupiter.tusa.map;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.util.Log;
-
-import com.jakewharton.disklrucache.DiskLruCache;
 import com.jupiter.tusa.cache.CacheStorage;
-import com.jupiter.tusa.map.net.LoadTileRunnable;
-
-import java.io.IOException;
-import java.io.InputStream;
+import com.jupiter.tusa.cache.OnImageReady;
+import com.jupiter.tusa.cache.PrepareImageRunnable;
 
 public class PrepareTileRunnable implements Runnable {
+    private String apiUrl = "https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/%d/%d/%d?access_token=pk.eyJ1IjoiaW52ZWN0eXMiLCJhIjoiY2w0emRzYWx5MG1iMzNlbW91eWRwZzdldCJ9.EAByLTrB_zc7-ytI6GDGBw";
     private final CacheStorage cacheStorage;
     private final int[] params;
     private OnTilePrepared onTileReady;
@@ -27,35 +22,13 @@ public class PrepareTileRunnable implements Runnable {
     @Override
     public void run() {
         String imageKey = String.format("tile%d%d%d", params[0], params[1], params[2]);
-        try {
-            Bitmap fromMemCache = cacheStorage.getBitmapFromMemCache(imageKey);
-            if(fromMemCache != null) {
-                onTileReady.received(fromMemCache, vertexLocations);
-                return;
+        String requestUrl = String.format(apiUrl, params[2], params[0], params[1]);
+        PrepareImageRunnable prepareImageRunnable = new PrepareImageRunnable(cacheStorage, new OnImageReady() {
+            @Override
+            public void received(Bitmap image) {
+                onTileReady.received(image, vertexLocations);
             }
-
-            DiskLruCache.Snapshot snapshot = cacheStorage.getSnapshotFromDiskCache(imageKey);
-            if(snapshot == null) {
-                LoadTileRunnable loadTileRunnable = new LoadTileRunnable(params[0], params[1], params[2]);
-                loadTileRunnable.run();
-                byte[] result = loadTileRunnable.getResult();
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inScaled = false;
-                Bitmap imageBitmap = BitmapFactory.decodeByteArray(result, 0, result.length);
-                cacheStorage.addBitmapToCache(imageKey, imageBitmap);
-                onTileReady.received(imageBitmap, vertexLocations);
-            } else {
-                //Log.d("GL_ARTEM", "Load from cache");
-                // Read the data from the snapshot's InputStream and decode it into a Bitmap.
-                InputStream inputStream = snapshot.getInputStream(0);
-                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                inputStream.close();
-                snapshot.close(); // Remember to close the snapshot when you're done.
-                cacheStorage.addBitmapToMemoryCache(imageKey, bitmap);
-                onTileReady.received(bitmap, vertexLocations);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        }, imageKey, requestUrl);
+        prepareImageRunnable.run();
     }
 }

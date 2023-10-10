@@ -12,7 +12,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
-public class Sprite {
+public class TuserMarker {
     private final Context mActivityContext;
     private int mTextureUniformHandle;
     private int mTextureCoordinateHandle;
@@ -25,24 +25,14 @@ public class Sprite {
     private int mPositionHandle;
     private int mColorHandle;
     private int mMVPMatrixHandle;
-    private float alpha = 0f;
+    private float alpha = 1f;
+    private short[] drawOrder;
     private Bitmap bitmap;
-
-    // coordinates
-    private float leftTopVertexX;
-    private float leftTopVertexY;
-    private float leftBottomVertexX;
-    private float leftBottomVertexY;
-    private float rightBottomVertexX;
-    private float rightBottomVertexY;
-    private float rightTopVertexX;
-    private float rightTopVertexY;
+    float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 1.0f };
 
     final int COORDINATE_SIZE = 4;
     final int COORDS_PER_VERTEX = 2;
-    private short drawOrder[] = { 0, 1, 2, 0, 2, 3 };
     private final int vertexStride = COORDS_PER_VERTEX * COORDINATE_SIZE; //Bytes per vertex
-    float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 1.0f };
 
     private final String vertexShaderCode =
             "attribute vec2 a_TexCoordinate;" +
@@ -50,79 +40,51 @@ public class Sprite {
             "uniform mat4 uMVPMatrix;" +
             "attribute vec4 vPosition;" +
             "void main() {" +
-            "  gl_Position = uMVPMatrix * vPosition;" +
+            "  gl_Position = uMVPMatrix * vPosition + vec4(0, 0, 0, 0);" +
             "  v_TexCoordinate = a_TexCoordinate;" +
             "}";
 
     private final String fragmentShaderCode =
-            "precision highp float;" +
             "uniform vec4 vColor;" +
             "uniform float uAlpha;" +
+            "uniform float uTime;" +
             "uniform sampler2D u_Texture;" +
             "varying vec2 v_TexCoordinate;" +
             "void main() {" +
             "gl_FragColor = vec4(texture2D(u_Texture, v_TexCoordinate).rgb, uAlpha);" +
             "}";
 
-    public float getAlpha() {
-        return alpha;
+    public int getSegments() {return _segments;}
+    public float getRadius() {return _radius;}
+    public float getCenterX() {return _centerX;}
+    public float getCenterY() {return _centerY;}
+    public float getAnimateToRadius() {return _animateRadiusTo;}
+    public float getAnimateToCenterX() {return _animateToCenterX;}
+    public float getAnimateToCenterY() {return _animateToCenterY;}
+    public void setAnimateRadiusTo(float radius) {
+        _animateRadiusTo = radius;
+    }
+    public void setAnimateToCenterXY(float x, float y) {
+        _animateToCenterX = x;
+        _animateToCenterY = y;
     }
 
-    public void setAlpha(float alpha) {
-        this.alpha = alpha;
-    }
+    private Float _animateRadiusTo;
+    private float _animateToCenterX;
+    private float _animateToCenterY;
+    private int _segments;
+    private float _radius;
+    private float _centerX;
+    private float _centerY;
 
-    private float[] getSpriteVertexLocations() {
-        return new float[] {
-                leftTopVertexX, leftTopVertexY,
-                leftBottomVertexX, leftBottomVertexY,
-                rightBottomVertexX, rightBottomVertexY,
-                rightTopVertexX, rightTopVertexY
-        };
-    }
-
-    public Sprite(Context context, Bitmap bitmap, float[] coordinates) {
+    public TuserMarker(Context context, Bitmap bitmap, int segments, float centerX, float centerY, float radius) {
+        _centerX = centerX;
+        _centerY = centerY;
+        _radius = radius;
+        _segments = segments;
         this.bitmap = bitmap;
-        leftTopVertexX = coordinates[0];
-        leftTopVertexY = coordinates[1];
-        leftBottomVertexX = coordinates[2];
-        leftBottomVertexY = coordinates[3];
-        rightBottomVertexX = coordinates[4];
-        rightBottomVertexY = coordinates[5];
-        rightTopVertexX = coordinates[6];
-        rightTopVertexY = coordinates[7];
-
+        changeGeometry(segments, centerX, centerY, radius);
         mActivityContext = context;
-
-        float[] spriteVertexLocations = getSpriteVertexLocations();
-        ByteBuffer bb = ByteBuffer.allocateDirect(spriteVertexLocations.length * COORDINATE_SIZE);
-        bb.order(ByteOrder.nativeOrder());
-        vertexBuffer = bb.asFloatBuffer();
-        vertexBuffer.put(spriteVertexLocations);
-        vertexBuffer.position(0);
-
-//        -1f,  1f,   // top left
-//        -1f, -1f,   // bottom left
-//        1f, -1f,    // bottom right
-//        1f,  1f     // top right
-
-        float[] cubeTextureCoordinateData =
-        {
-                0f, 0f,
-                0f,  1f,
-                1f,  1f,
-                1f, 0f,
-        };
-
-        mCubeTextureCoordinates = ByteBuffer.allocateDirect(cubeTextureCoordinateData.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
-        mCubeTextureCoordinates.put(cubeTextureCoordinateData).position(0);
-
-        //Initialize byte buffer for the draw list
-        ByteBuffer dlb = ByteBuffer.allocateDirect(drawOrder.length * 2);
-        dlb.order(ByteOrder.nativeOrder());
-        drawListBuffer = dlb.asShortBuffer();
-        drawListBuffer.put(drawOrder);
-        drawListBuffer.position(0);
 
         int vertexShader = MyGLRenderer.loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode);
         int fragmentShader = MyGLRenderer.loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode);
@@ -135,6 +97,49 @@ public class Sprite {
         GLES20.glBindAttribLocation(shaderProgram, 0, "a_TexCoordinate");
         GLES20.glLinkProgram(shaderProgram);
         mTextureDataHandle = loadTexture(mActivityContext, bitmap);
+    }
+
+
+    public void changeGeometry(int segments, float centerX, float centerY, float radius) {
+        _radius = radius;
+        _segments = segments;
+        _centerY = centerY;
+        _centerX = centerX;
+        float[] vertexLocations = new float[segments * COORDS_PER_VERTEX];
+        drawOrder = new short[segments];
+
+        float[] cubeTextureCoordinateData = new float[segments * COORDS_PER_VERTEX];
+
+        for (int i = 0; i < segments; i++) {
+            double angle = Math.toRadians(i * (360.0 / segments));
+
+            float x = (float) (radius * Math.cos(angle));
+            float y = (float) (radius * Math.sin(angle));
+
+            vertexLocations[i * 2] = centerX + x;
+            vertexLocations[i * 2 + 1] = centerY + y;
+
+            cubeTextureCoordinateData[i * 2] = (float) (0.5 + 0.5 * Math.cos(angle));
+            cubeTextureCoordinateData[i * 2 + 1] = (float) (0.5 - 0.5 * Math.sin(angle));
+
+            drawOrder[i] = (short) i;
+        }
+
+        ByteBuffer bb = ByteBuffer.allocateDirect(vertexLocations.length * COORDINATE_SIZE);
+        bb.order(ByteOrder.nativeOrder());
+        vertexBuffer = bb.asFloatBuffer();
+        vertexBuffer.put(vertexLocations);
+        vertexBuffer.position(0);
+
+        mCubeTextureCoordinates = ByteBuffer.allocateDirect(cubeTextureCoordinateData.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
+        mCubeTextureCoordinates.put(cubeTextureCoordinateData).position(0);
+
+        //Initialize byte buffer for the draw list
+        ByteBuffer dlb = ByteBuffer.allocateDirect(drawOrder.length * 2);
+        dlb.order(ByteOrder.nativeOrder());
+        drawListBuffer = dlb.asShortBuffer();
+        drawListBuffer.put(drawOrder);
+        drawListBuffer.position(0);
     }
 
     public void draw(float[] mvpMatrix)
@@ -164,11 +169,9 @@ public class Sprite {
         mTextureUniformHandle = GLES20.glGetUniformLocation(shaderProgram, "u_Texture");
         mTextureCoordinateHandle = GLES20.glGetAttribLocation(shaderProgram, "a_TexCoordinate");
 
-        // Используем юнит 0
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        // Выбираем текстуру mTextureDataHandle. она применяется к юниту 0
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureDataHandle);
-        GLES20.glUniform1i(mTextureUniformHandle, 0);
+        GLES20.glUniform1i(mTextureUniformHandle, 1);
 
         //Pass in the texture coordinate information
         mCubeTextureCoordinates.position(0);
@@ -178,10 +181,8 @@ public class Sprite {
         mMVPMatrixHandle = GLES20.glGetUniformLocation(shaderProgram, "uMVPMatrix");
         GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
 
-        //Draw the triangle
-        GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.length, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
+        GLES20.glDrawElements(GLES20.GL_TRIANGLE_FAN, drawOrder.length, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
 
-        //Disable Vertex Array
         GLES20.glDisableVertexAttribArray(mPositionHandle);
     }
 

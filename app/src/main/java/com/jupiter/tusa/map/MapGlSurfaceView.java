@@ -11,10 +11,12 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import androidx.annotation.NonNull;
 import com.jupiter.tusa.MainActivity;
+import com.jupiter.tusa.cache.OnImageReady;
+import com.jupiter.tusa.cache.PrepareImageRunnable;
+import com.jupiter.tusa.map.figures.TuserMarker;
 import com.jupiter.tusa.map.figures.Sprite;
 import com.jupiter.tusa.map.scale.MapScaleListener;
 import com.jupiter.tusa.utils.MathUtils;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -23,7 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class MyGlSurfaceView extends GLSurfaceView {
+public class MapGlSurfaceView extends GLSurfaceView {
     private final MyGLRenderer renderer;
     private MainActivity mainActivity;
     private int executorPoolsAmount = 2;
@@ -40,6 +42,9 @@ public class MyGlSurfaceView extends GLSurfaceView {
     final int tilesAmount = 80;
     private final float maxBottomRightZoneWorldLength = (float) Math.pow(2, maxMapZ);
     private float useTileSize = determineTileSize();
+
+    // Маркера
+    TuserMarker testMarker;
 
     // Перемещение карты
     private float previousX = 0f;
@@ -63,6 +68,10 @@ public class MyGlSurfaceView extends GLSurfaceView {
     // animations
     private final List<Tile> fadeOutTiles = new ArrayList<Tile>();
     private final ReentrantLock fadeOutTilesLock = new ReentrantLock();
+    private final List<TuserMarker> animatedMarkersRadius = new ArrayList<TuserMarker>();
+    private final ReentrantLock animatedMarkersRadiusLock = new ReentrantLock();
+    private final List<TuserMarker> animatedMarkersMove = new ArrayList<TuserMarker>();
+    private final ReentrantLock animatedMarkersMoveLock = new ReentrantLock();
     public float getCurrentMapX() {
         return currentMapX;
     }
@@ -123,7 +132,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
         renderer.renderSprite(sprite);
     }
 
-    public MyGlSurfaceView(Context context, AttributeSet attributeSet) {
+    public MapGlSurfaceView(Context context, AttributeSet attributeSet) {
         super(context, attributeSet);
         mainActivity = (MainActivity) context;
         setEGLContextClientVersion(2);
@@ -141,17 +150,17 @@ public class MyGlSurfaceView extends GLSurfaceView {
 
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
-        initCameraZ(11);
+        initCameraZ(1);
         initCameraLatLng(55.7558f, 37.6173f);
 
         // Анимации
         Handler animationHandler = new Handler();
-        long delayMillis = 60;
+        long delayMillis = 20;
         animationHandler.post(new Runnable() {
             @Override
             public void run() {
-                // Sprites fade out animation
 
+                // Sprites fade out animation
                 fadeOutTilesLock.lock();
                 Iterator<Tile> iterator = fadeOutTiles.iterator();
                 while(iterator.hasNext()) {
@@ -169,11 +178,99 @@ public class MyGlSurfaceView extends GLSurfaceView {
                 }
                 fadeOutTilesLock.unlock();
 
-                requestRender();
+                animatedMarkersRadiusLock.lock();
+                Iterator<TuserMarker> iteratorMarkers = animatedMarkersRadius.iterator();
+                float scaleRadiusMarkerSpeed = (float) getRadiusOfMarkerForCurrentMap() / 20;
+                while(iteratorMarkers.hasNext()) {
+                    TuserMarker tuserMarker = iteratorMarkers.next();
+                    float currentRadius = tuserMarker.getRadius();
+                    float animatedRadius = tuserMarker.getAnimateToRadius();
+                    if(currentRadius > animatedRadius) {
+                        currentRadius -= scaleRadiusMarkerSpeed;
+                    } else {
+                        currentRadius += scaleRadiusMarkerSpeed;
+                    }
+
+                    //Log.d("ANIMATE_MARKERS", String.format("Current radius %f to %f", currentRadius, animatedRadius));
+
+                    tuserMarker.changeGeometry(tuserMarker.getSegments(), tuserMarker.getCenterX(), tuserMarker.getCenterY(), currentRadius);
+
+                    if(Math.abs(currentRadius - animatedRadius) <= scaleRadiusMarkerSpeed) {
+                        iteratorMarkers.remove();
+                    }
+                }
+                animatedMarkersRadiusLock.unlock();
+
+
+                animatedMarkersMoveLock.lock();
+                Iterator<TuserMarker> iteratorMarkersMove = animatedMarkersMove.iterator();
+                float moveMarkerSpeed = useTileSize / 100;
+                while(iteratorMarkersMove.hasNext()) {
+                    TuserMarker marker = iteratorMarkersMove.next();
+                    float currentX = marker.getCenterX();
+                    float currentY = marker.getCenterY();
+                    float animateToX = marker.getAnimateToCenterX();
+                    float absX = Math.abs(currentX - animateToX);
+                    if(absX > moveMarkerSpeed) {
+                        if(currentX > marker.getAnimateToCenterX()) {
+                            currentX -= moveMarkerSpeed;
+                        } else {
+                            currentX += moveMarkerSpeed;
+                        }
+                    }
+
+                    if(Math.abs(currentY - marker.getAnimateToCenterY()) > moveMarkerSpeed) {
+                        if(currentY > marker.getAnimateToCenterY()) {
+                            currentY -= moveMarkerSpeed;
+                        } else {
+                            currentY += moveMarkerSpeed;
+                        }
+                    }
+                    marker.changeGeometry(marker.getSegments(), currentX, currentY, marker.getRadius());
+
+                    if(Math.abs(currentX - marker.getAnimateToCenterX()) <= moveMarkerSpeed && Math.abs(currentY - marker.getAnimateToCenterY()) <= moveMarkerSpeed) {
+                        iteratorMarkersMove.remove();
+                    }
+                }
+                animatedMarkersMoveLock.unlock();
+
+                // Если что-то обновилось то заставляем рендер перерендрить картинку
+                boolean anythingIsAnimated = !fadeOutTiles.isEmpty() ||
+                        !animatedMarkersRadius.isEmpty() || !animatedMarkersMove.isEmpty();
+                if(anythingIsAnimated) {
+                    requestRender();
+                }
+
                 animationHandler.postDelayed(this, delayMillis);
             }
         });
+    }
 
+    public void surfaceCreated() {
+        addMarker(55.7558f, 37.6173f);
+    }
+
+    public void addMarker(float lat, float lon) {
+        float[] xAndY = latLngToXAndY(lat, lon);
+        PrepareImageRunnable prepareImageRunnable = new PrepareImageRunnable(
+                mainActivity.getCacheStorage(),
+                new OnImageReady() {
+                    @Override
+                    public void received(Bitmap image) {
+                        queueEvent(new Runnable() {
+                            @Override
+                            public void run() {
+                                testMarker = new TuserMarker(mainActivity, image, 60, xAndY[0], xAndY[1], maxBottomRightZoneWorldLength / 50);
+                                renderer.renderCircle(testMarker);
+                            }
+                        });
+                        requestRender();
+                    }
+                },
+                "testmarker1",
+                "https://sun9-80.userapi.com/impg/pW2fP0QmjMGNLcOybHo1YrLDbYTVUktiEglcGA/jz9bPy-yo7U.jpg?size=1024x1080&quality=95&sign=19ac7ac8920eb60dd627eb485905e967&type=album"
+        );
+        executorService.submit(prepareImageRunnable);
     }
 
     public void renderMap(int[][][] viewTiles, RenderTileInitiator initiator) {
@@ -392,6 +489,16 @@ public class MyGlSurfaceView extends GLSurfaceView {
         actionsAfterMove();
     }
 
+    public void setCameraZ(int z) {
+        float scaleFactor = calcScaleFactorByZ(z);
+        mapScaleListener.setScaleFactor(scaleFactor);
+        renderer.setSeeMultiply(scaleFactor);
+        updateMapZ(scaleFactor);
+        calcCurrentTilesXAndY();
+        previousCurrentTileX = currentTileX;
+        previousCurrentTileY = currentTileY;
+    }
+
     private void actionsAfterMove() {
         // Для оптимизации рендринга
         calcCurrentTilesXAndY();
@@ -427,9 +534,7 @@ public class MyGlSurfaceView extends GLSurfaceView {
         return new float[] { (float)x, (float)y};
     }
 
-    public float[] calcCurrentLatLongInRadians() {
-        float y = currentMapY * 2 + maxBottomRightZoneWorldLength;
-        float x = currentMapX * 2 - maxBottomRightZoneWorldLength;
+    public float[] xAndYToLatLng(float x, float y) {
         float longitudeFactor = x / maxBottomRightZoneWorldLength;
 
         float longitude = (float) (longitudeFactor * Math.PI);
@@ -437,94 +542,63 @@ public class MyGlSurfaceView extends GLSurfaceView {
         return new float[] { latitude, longitude };
     }
 
-    public void updateMapZ(float scaleFactor) {
-        int determinedMapZ = 0;
+    public float[] calcCurrentLatLongInRadians() {
+        float y = currentMapY * 2 + maxBottomRightZoneWorldLength;
+        float x = currentMapX * 2 - maxBottomRightZoneWorldLength;
+        return xAndYToLatLng(x, y);
+    }
+
+    private void clearAllTiles() {
+        for(int i = 0; i < renderedTiles.length; i++) {
+            Tile tile = renderedTiles[i];
+            if(tile != null) {
+                clearTile(i);
+            }
+        }
+    }
+
+    public void determineMoveStrong(float scaleFactor) {
         float determineMoveStrong = 60;
-
-//        if(scaleFactor <= 1.5) {
-//            determineMoveStrong = 0.0008f;
-//            determinedMapZ = 18;
-//        } else if(scaleFactor <= 4) {
-//            determineMoveStrong = 0.003f;
-//            determinedMapZ = 17;
-//        } else if(scaleFactor <= 7) {
-//            determineMoveStrong = 0.005f;
-//            determinedMapZ = 16;
-//        } else if(scaleFactor <= 12) {
-//            determineMoveStrong = 0.009f;
-//            determinedMapZ = 15;
-//        } else if(scaleFactor <= 28) {
-//            determineMoveStrong = 0.015f;
-//            determinedMapZ = 14;
-//        } else if(scaleFactor <= 55) {
-//            determineMoveStrong = 0.04f;
-//            determinedMapZ = 13;
-//        } else if(scaleFactor <= 110) {
-//            determineMoveStrong = 0.09f;
-//            determinedMapZ = 12;
-//        } else if(scaleFactor <= 280) {
-//            determineMoveStrong = 0.2f;
-//            determinedMapZ = 11;
-//        } else if(scaleFactor <= 500) {
-//            determineMoveStrong = 0.5f;
-//            determinedMapZ = 10;
-//        } else if (scaleFactor <= 1000) {
-//            determineMoveStrong = 1;
-//            determinedMapZ = 9;
-//        } else if (scaleFactor <= 2000) {
-//            determineMoveStrong = 2;
-//            determinedMapZ = 8;
-//        } else if(scaleFactor <= 4000) {
-//            determineMoveStrong = 3;
-//            determinedMapZ = 7;
-//        } else if(scaleFactor <= 6000) {
-//            determineMoveStrong = 6;
-//            determinedMapZ = 6;
-//        } else if(scaleFactor <= 17000) {
-//            determineMoveStrong = 8;
-//            determinedMapZ = 5;
-//        } else if(scaleFactor <= 30000) {
-//            determineMoveStrong = 21;
-//            determinedMapZ = 4;
-//        } else if(scaleFactor <= 80000) {
-//            determineMoveStrong = 36;
-//            determinedMapZ = 3;
-//        } else if(scaleFactor <= 130000) {
-//            determineMoveStrong = 50;
-//            determinedMapZ = 2;
-//        } else if(scaleFactor <= 190000) {
-//            determineMoveStrong = 55;
-//            determinedMapZ = 1;
-//        }
-
-        // логарифмическая регрессия
-        determinedMapZ = calcMapZByScaleFactor(scaleFactor);
-        // степенная регрессия
         determineMoveStrong = calcMoveStrongByScaleFactor(scaleFactor);
-
-        //Log.d("GL_ARTEM", "Scale factor = " + scaleFactor + " mapZ = " + determinedMapZ);
-
         if(determineMoveStrong != moveStrong) {
             moveStrong = determineMoveStrong;
         }
+    }
+
+    public void updateMapZ(float scaleFactor) {
+        int determinedMapZ = 0;
+        determineMoveStrong(scaleFactor);
+
+        // логарифмическая регрессия
+        determinedMapZ = calcMapZByScaleFactor(scaleFactor);
 
         if(determinedMapZ != mapZ) {
             boolean up = determinedMapZ > mapZ;
             RenderTileInitiator initiator = up ? RenderTileInitiator.ZOOM_UP : RenderTileInitiator.ZOOM_DOWN;
             // убираем все тайлы
-            for(int i = 0; i < renderedTiles.length; i++) {
-                Tile tile = renderedTiles[i];
-                if(tile != null) {
-                    clearTile(i);
-                }
-            }
+            clearAllTiles();
 
             mapZ = determinedMapZ;
             useTileSize = determineTileSize();
             Log.d("GL_ARTEM", "New zoom " + mapZ);
 
+            // Обновляем размер маркеров
+            animatedMarkersRadiusLock.lock();
+            animatedMarkersRadius.clear();
+            List<TuserMarker> markers = renderer.animateMarkersRadius(getRadiusOfMarkerForCurrentMap());
+            animatedMarkersRadius.addAll(markers);
+            animatedMarkersRadiusLock.unlock();
+
+            // чтобы calcViewTiles правильно отработал нужно чтобы матрицы изменились
+            // а матрица modelViewMatrix считается в момент рендринга...
+            requestRender();
+
             renderMap(initiator);
         }
+    }
+
+    private float getRadiusOfMarkerForCurrentMap() {
+        return (float) (useTileSize / 10.);
     }
 
     private int calcMapZByScaleFactor(double scaleFactor) {
@@ -546,6 +620,18 @@ public class MyGlSurfaceView extends GLSurfaceView {
 
         float x = event.getX();
         float y = event.getY();
+
+//        float[] worldLocation = renderer.screenCoordinatesToWorldLocation(x, y);
+//        float[] latLng = xAndYToLatLng(worldLocation[0], worldLocation[1]);
+//        animatedMarkersMoveLock.lock();
+//        Iterator<TuserMarker> markers = renderer.getMarkers().iterator();
+//        while (markers.hasNext()) {
+//            TuserMarker moveMarker = markers.next();
+//            moveMarker.setAnimateToCenterXY(worldLocation[0], worldLocation[1]);
+//            animatedMarkersMove.clear();
+//            animatedMarkersMove.add(moveMarker);
+//        }
+//        animatedMarkersMoveLock.unlock();
 
         if(event.getPointerCount() == 2) {
             // Маштабирование карты

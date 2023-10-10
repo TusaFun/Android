@@ -1,4 +1,4 @@
-package com.jupiter.tusa.map.net;
+package com.jupiter.tusa.image;
 
 public interface OnImageLoaded {
     void execute(byte[] image);

@@ -7,9 +7,11 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.jupiter.tusa.R;
-import com.jupiter.tusa.map.MyGlSurfaceView;
+import com.jupiter.tusa.map.MapGlSurfaceView;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -27,7 +29,7 @@ public class MapFragment extends Fragment {
     private String mParam1;
     private String mParam2;
 
-    private MyGlSurfaceView myGlSurfaceView;
+    private MapGlSurfaceView myGlSurfaceView;
 
     public MapFragment() {
         // Required empty public constructor
@@ -51,7 +53,10 @@ public class MapFragment extends Fragment {
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
 
-        //myGlSurfaceView = new MyGlSurfaceView((MainActivity) requireActivity());
+    }
+
+    private float[] getMeLatLng() {
+        return new float[] {55.7558f, 37.6173f};
     }
 
     @Override
@@ -59,6 +64,20 @@ public class MapFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_map, container, false);
+
+        MapGlSurfaceView mapGlSurfaceView = view.findViewById(R.id.map_gl_surface);
+
+        FloatingActionButton showMeActionButton = view.findViewById(R.id.show_me_action_button);
+        showMeActionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                float[] myLocationLatLng = getMeLatLng();
+                //mapGlSurfaceView.setCameraLatLng(myLocationLatLng[0], myLocationLatLng[1], 11);
+                mapGlSurfaceView.setCameraZ(5);
+                mapGlSurfaceView.requestRender();
+            }
+        });
+
         return view;
     }
 }

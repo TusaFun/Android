@@ -6,8 +6,8 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.util.Log;
 import com.jupiter.tusa.MainActivity;
+import com.jupiter.tusa.map.figures.TuserMarker;
 import com.jupiter.tusa.map.figures.Sprite;
-
 import java.util.ArrayList;
 import java.util.List;
 import javax.microedition.khronos.opengles.GL10;
@@ -15,7 +15,7 @@ import javax.microedition.khronos.opengles.GL10;
 public class MyGLRenderer implements GLSurfaceView.Renderer {
     private Context context;
     private MainActivity mainActivity;
-    private MyGlSurfaceView myGlSurfaceView;
+    private MapGlSurfaceView myGlSurfaceView;
 
     // Viewport
     private float ratio;
@@ -23,6 +23,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
     private int height;
 
     private final List<Sprite> sprites = new ArrayList();
+    private final List<TuserMarker> circles = new ArrayList<>();
+    public List<TuserMarker> getMarkers() {return circles;}
 
     private final float[] modelViewMatrix = new float[16];
     private final float[] projectionMatrix = new float[16];
@@ -40,7 +42,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         return ratio;
     }
 
-    public MyGLRenderer(Context context, MyGlSurfaceView myGlSurfaceView) {
+    public MyGLRenderer(Context context, MapGlSurfaceView myGlSurfaceView) {
         this.context = context;
         this.mainActivity = (MainActivity) context;
         this.myGlSurfaceView = myGlSurfaceView;
@@ -59,12 +61,28 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         return shader;
     }
 
+    public List<TuserMarker> animateMarkersRadius(float radius) {
+        for (TuserMarker marker : circles) {
+
+            marker.setAnimateRadiusTo(radius);
+        }
+        return circles;
+    }
+
     public void renderSprite(Sprite sprite) {
         sprites.add(sprite);
     }
 
     public void removeSprite(Sprite sprite) {
         sprites.remove(sprite);
+    }
+
+    public void renderCircle(TuserMarker circle) {
+        circles.add(circle);
+    }
+
+    public void removeCircle(TuserMarker circle) {
+        circles.remove(circle);
     }
 
     public void moveCameraHorizontally(float x, float y) {
@@ -94,9 +112,12 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
         Matrix.multiplyMM(modelViewMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
 
-
         for(int i = 0; i < sprites.size(); i++) {
             sprites.get(i).draw(modelViewMatrix);
+        }
+
+        for(int i = 0; i < circles.size(); i ++) {
+            circles.get(i).draw(modelViewMatrix);
         }
     }
 
@@ -106,7 +127,7 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 
-
+        myGlSurfaceView.surfaceCreated();
     }
 
     @Override
