@@ -15,7 +15,7 @@ import com.jupiter.tusa.cache.OnImageReady;
 import com.jupiter.tusa.cache.PrepareImageRunnable;
 import com.jupiter.tusa.map.figures.TuserMarker;
 import com.jupiter.tusa.map.figures.Sprite;
-import com.jupiter.tusa.map.scale.MapScaleListener;
+import com.jupiter.tusa.newmap.MapScaleListener;
 import com.jupiter.tusa.utils.MathUtils;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -81,7 +81,7 @@ public class MapGlSurfaceView extends GLSurfaceView {
     }
 
     public float getScaleFactor() {
-        return mapScaleListener.getScaleFactor();
+        return 1;
     }
 
     // Применение тайлов после загрузки
@@ -139,7 +139,7 @@ public class MapGlSurfaceView extends GLSurfaceView {
         renderer = new MyGLRenderer(context, this);
         setRenderer(renderer);
 
-        mapScaleListener = new MapScaleListener(maxScaleFactor, 1, maxScaleFactor);
+        //mapScaleListener = new MapScaleListener(maxScaleFactor, 1, maxScaleFactor);
         mScaleDetector = new ScaleGestureDetector(context, mapScaleListener);
         gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
@@ -200,7 +200,6 @@ public class MapGlSurfaceView extends GLSurfaceView {
                     }
                 }
                 animatedMarkersRadiusLock.unlock();
-
 
                 animatedMarkersMoveLock.lock();
                 Iterator<TuserMarker> iteratorMarkersMove = animatedMarkersMove.iterator();
@@ -635,7 +634,7 @@ public class MapGlSurfaceView extends GLSurfaceView {
 
         if(event.getPointerCount() == 2) {
             // Маштабирование карты
-            float scaleFactor = mapScaleListener.getScaleFactor();
+            float scaleFactor = 1;
             renderer.setSeeMultiply(scaleFactor);
             updateMapZ(scaleFactor);
             // подсчет нужен для оптимизации рендринга

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -13,15 +12,9 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.jupiter.tusa.MainActivity;
-import com.jupiter.tusa.R;
-import com.jupiter.tusa.Tusa;
-import com.jupiter.tusa.TusaUserGrpc;
-import com.jupiter.tusa.background.PeriodicWorkRequestHelper;
 import com.jupiter.tusa.background.TusaWorker;
 import com.jupiter.tusa.databinding.FragmentCheckJwtTokenBinding;
-import com.jupiter.tusa.grpc.TusaGrpc;
 
 import java.util.Date;
 
@@ -103,6 +96,13 @@ public class CheckJwtTokenFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 mainActivity.logout();
+            }
+        });
+
+        binding.testButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
             }
         });
     }

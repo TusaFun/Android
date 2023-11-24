@@ -65,18 +65,18 @@ public class MapFragment extends Fragment {
         // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_map, container, false);
 
-        MapGlSurfaceView mapGlSurfaceView = view.findViewById(R.id.map_gl_surface);
-
-        FloatingActionButton showMeActionButton = view.findViewById(R.id.show_me_action_button);
-        showMeActionButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                float[] myLocationLatLng = getMeLatLng();
-                //mapGlSurfaceView.setCameraLatLng(myLocationLatLng[0], myLocationLatLng[1], 11);
-                mapGlSurfaceView.setCameraZ(5);
-                mapGlSurfaceView.requestRender();
-            }
-        });
+//        MapGlSurfaceView mapGlSurfaceView = view.findViewById(R.id.map_gl_surface);
+//
+//        FloatingActionButton showMeActionButton = view.findViewById(R.id.show_me_action_button);
+//        showMeActionButton.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                float[] myLocationLatLng = getMeLatLng();
+//                //mapGlSurfaceView.setCameraLatLng(myLocationLatLng[0], myLocationLatLng[1], 11);
+//                mapGlSurfaceView.setCameraZ(5);
+//                mapGlSurfaceView.requestRender();
+//            }
+//        });
 
         return view;
     }

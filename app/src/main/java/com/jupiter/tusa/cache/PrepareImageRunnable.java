@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
 import com.jakewharton.disklrucache.DiskLruCache;
+import com.jupiter.tusa.cache.template.CacheBitmap;
 import com.jupiter.tusa.image.LoadImageRunnable;
 
 import java.io.IOException;
@@ -26,7 +27,8 @@ public class PrepareImageRunnable implements Runnable{
     @Override
     public void run() {
         try {
-            Bitmap fromMemCache = cacheStorage.getBitmapFromMemCache(imageKey);
+            CacheBitmap cacheBitmap = new CacheBitmap(cacheStorage);
+            Bitmap fromMemCache = cacheBitmap.getFromMem(imageKey);
             if(fromMemCache != null) {
                 onImageReady.received(fromMemCache);
                 return;
@@ -40,7 +42,7 @@ public class PrepareImageRunnable implements Runnable{
                 BitmapFactory.Options options = new BitmapFactory.Options();
                 options.inScaled = false;
                 Bitmap imageBitmap = BitmapFactory.decodeByteArray(result, 0, result.length);
-                cacheStorage.addBitmapToCache(imageKey, imageBitmap);
+                cacheBitmap.addToCache(imageKey, imageBitmap);
                 onImageReady.received(imageBitmap);
             } else {
                 //Log.d("GL_ARTEM", "Load from cache");
@@ -49,7 +51,7 @@ public class PrepareImageRunnable implements Runnable{
                 Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
                 inputStream.close();
                 snapshot.close(); // Remember to close the snapshot when you're done.
-                cacheStorage.addBitmapToMemoryCache(imageKey, bitmap);
+                cacheBitmap.addToMemCache(imageKey, bitmap);
                 onImageReady.received(bitmap);
             }
         } catch (IOException e) {

@@ -1,4 +1,4 @@
-package com.jupiter.tusa.newmap.draw;
+package com.jupiter.tusa.jnioutput;
 
 public class TriangleInput {
     public float[] vertices;

@@ -6,54 +6,54 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".ui.MapFragment">
 
-    <com.jupiter.tusa.map.MapGlSurfaceView
+    <com.jupiter.tusa.newmap.MapSurfaceView
         android:id="@+id/map_gl_surface"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
     />
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_gravity="bottom">
+<!--    <LinearLayout-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:orientation="horizontal"-->
+<!--        android:gravity="center"-->
+<!--        android:layout_gravity="bottom">-->
 
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/invisible_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
-            android:visibility="invisible"
-            app:fabCustomSize="80dp"
-            app:backgroundTint="@color/purple_500"
-            app:maxImageSize="30dp"
-            app:tint="@color/white"
-            app:srcCompat="@drawable/ic_baseline_location_on_24"/>
+<!--        <com.google.android.material.floatingactionbutton.FloatingActionButton-->
+<!--            android:id="@+id/invisible_button"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_margin="16dp"-->
+<!--            android:visibility="invisible"-->
+<!--            app:fabCustomSize="80dp"-->
+<!--            app:backgroundTint="@color/purple_500"-->
+<!--            app:maxImageSize="30dp"-->
+<!--            app:tint="@color/white"-->
+<!--            app:srcCompat="@drawable/ic_baseline_location_on_24"/>-->
 
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/home_action_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
-            app:fabCustomSize="100dp"
-            app:backgroundTint="@color/purple_500"
-            app:maxImageSize="60dp"
-            app:tint="@color/white"
-            app:srcCompat="@drawable/ic_baseline_home_24"/>
+<!--        <com.google.android.material.floatingactionbutton.FloatingActionButton-->
+<!--            android:id="@+id/home_action_button"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_margin="16dp"-->
+<!--            app:fabCustomSize="100dp"-->
+<!--            app:backgroundTint="@color/purple_500"-->
+<!--            app:maxImageSize="60dp"-->
+<!--            app:tint="@color/white"-->
+<!--            app:srcCompat="@drawable/ic_baseline_home_24"/>-->
 
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/show_me_action_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
-            app:fabCustomSize="80dp"
-            app:backgroundTint="@color/purple_500"
-            app:maxImageSize="30dp"
-            app:tint="@color/white"
-            app:srcCompat="@drawable/ic_baseline_location_on_24"/>
+<!--        <com.google.android.material.floatingactionbutton.FloatingActionButton-->
+<!--            android:id="@+id/show_me_action_button"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_margin="16dp"-->
+<!--            app:fabCustomSize="80dp"-->
+<!--            app:backgroundTint="@color/purple_500"-->
+<!--            app:maxImageSize="30dp"-->
+<!--            app:tint="@color/white"-->
+<!--            app:srcCompat="@drawable/ic_baseline_location_on_24"/>-->
 
 
-    </LinearLayout>
+<!--    </LinearLayout>-->
 
 </FrameLayout>

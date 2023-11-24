@@ -1,13 +1,19 @@
-package com.jupiter.tusa.newmap.draw;
+package com.jupiter.tusa.newmap.mvt;
 
-public class TrianglesDrawInput {
-    public float[] vertices;
+import java.util.Map;
+
+import vector_tile.VectorTile;
+
+public class MvtPolygon extends MvtObject{
     public int[] triangles;
-    public int dimension;
 
-    public TrianglesDrawInput(float[] vertices, int[] triangles, int dimension) {
+    public MvtPolygon(
+            float[] vertices,
+            int[] triangles,
+            String layerName,
+            Map<String, VectorTile.Tile.Value> tags
+    ) {
+        super(vertices, layerName, tags);
         this.triangles = triangles;
-        this.vertices = vertices;
-        this.dimension = dimension;
     }
 }

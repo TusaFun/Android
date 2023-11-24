@@ -1,34 +1,45 @@
 package com.jupiter.tusa.newmap.draw;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.jupiter.tusa.cache.template.CacheBytes;
 import com.jupiter.tusa.newmap.MapSurfaceView;
-import com.jupiter.tusa.newmap.draw.prepare.PrepareToDrawMvtData;
-import com.jupiter.tusa.newmap.draw.prepare.PrepareToDrawMvtGeom;
-import com.jupiter.tusa.newmap.draw.prepare.PreparedLayersObjects;
+import com.jupiter.tusa.newmap.TileWorldCoordinates;
+import com.jupiter.tusa.newmap.gl.program.FDOFloatBasicInput;
 import com.jupiter.tusa.newmap.load.tiles.MvtApiResource;
-
+import com.jupiter.tusa.newmap.mvt.MvtLines;
+import com.jupiter.tusa.newmap.mvt.MvtObject;
+import com.jupiter.tusa.newmap.mvt.MvtObjectStyled;
+import com.jupiter.tusa.newmap.mvt.MvtPolygon;
+import com.jupiter.tusa.newmap.mvt.MvtUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import vector_tile.VectorTile;
 
-public class MvtToDrawObjectPipe implements Runnable {
-    private CacheBytes cacheBytes;
-    private MvtApiResource mvtApiResource;
-    private MapSurfaceView mapSurfaceView;
-    public MvtToDrawObjectPipe(
+public class MvtToDrawObjectPipeRunnable implements Runnable {
+    private final CacheBytes cacheBytes;
+    private final MvtApiResource mvtApiResource;
+    private final MapSurfaceView mapSurfaceView;
+    private final CountDownLatch countDownLatchReady;
+    public MvtToDrawObjectPipeRunnable(
             CacheBytes cacheBytes,
             MvtApiResource mvtApiResource,
-            MapSurfaceView mapSurfaceView
+            MapSurfaceView mapSurfaceView,
+            CountDownLatch countDownLatchReady
     ) {
         this.cacheBytes = cacheBytes;
         this.mvtApiResource = mvtApiResource;
         this.mapSurfaceView = mapSurfaceView;
+        this.countDownLatchReady = countDownLatchReady;
     }
 
     @Override
     public void run() {
+        // GET TILE
         byte[] tile = cacheBytes.get(mvtApiResource.tileKey());
         if(tile == null) {
             try {
@@ -53,35 +64,92 @@ public class MvtToDrawObjectPipe implements Runnable {
                 e.printStackTrace();
             }
         }
+        if(tile == null) {
+            countDownLatchReady.countDown();
+            return;
+        }
+        // END GET TILE
 
-        PrepareToDrawMvtData prepareToDrawMvtData = new PrepareToDrawMvtData(
-                new PreparedLayersObjects(
-                        new ArrayList<>(),
-                        new ArrayList<>()
-                ),
-                tile,
-                mapSurfaceView.getMapStyle()
-        );
-        PrepareToDrawMvtGeom prepareToDrawMvtGeom = new PrepareToDrawMvtGeom();
-        prepareToDrawMvtGeom.prepareMvt(prepareToDrawMvtData);
 
-        int extent = 4096;
-        float worldX =  0;
-        float worldY = 0;
+        // READ MVT VECTOR DATA
+        MapStyleList mapStyleList = mapSurfaceView.getMapStyle();
+        MapStyle mapStyle = mapStyleList.getStyleFor(mvtApiResource.z);
+        VectorTile.Tile mvtTile = null;
+        try {
+           mvtTile = MvtUtils.parse(tile);
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+        }
+        assert mvtTile != null;
 
-        for(float[] vertices : prepareToDrawMvtGeom.allVerticesArrays) {
-            for (int i = 0; i < vertices.length / 2; i++) {
-                vertices[i * 2] += worldX;
-                vertices[i * 2 + 1] += worldY;
+        List<MvtObject> mvtObjects = new ArrayList<>();
+        List<VectorTile.Tile.Layer> layers = mvtTile.getLayersList();
+        for(VectorTile.Tile.Layer layer : layers) {
+            if(!mapStyle.showLayers.contains(layer.getName())) {
+                //Log.d("GL_ARTEM", String.format("layer skipped %s", layer.getName()));
+                continue;
+            }
+
+            for(VectorTile.Tile.Feature feature : layer.getFeaturesList()) {
+                if(feature.getType() == VectorTile.Tile.GeomType.POLYGON) {
+                    mvtObjects.addAll(MvtUtils.readPolygons(feature, layer));
+                } else if(feature.getType() == VectorTile.Tile.GeomType.LINESTRING) {
+                    mvtObjects.addAll(MvtUtils.readLines(feature, layer));
+                }
             }
         }
+        // END READ MVT VECTOR DATA
 
-        mapSurfaceView.queueEvent(new Runnable() {
-            @Override
-            public void run() {
-                mapSurfaceView.getMapRenderer().drawPreparedData(prepareToDrawMvtData.drawLayersObjects);
+
+        // MOVE TILE
+        int tileZ = mvtApiResource.z;
+        int tileX = mvtApiResource.x;
+        int tileY = mvtApiResource.y;
+        TileWorldCoordinates tileWorldCoordinates = new TileWorldCoordinates();
+        for(MvtObject mvtObject: mvtObjects) {
+            tileWorldCoordinates.applyToTileMvt(mvtObject, tileX, tileY, tileZ);
+        }
+        // END MOVE TILE
+
+
+        // STYLE MAP
+        List<MvtObjectStyled> mvtObjectStyledList = new ArrayList<>();
+        for (MvtObject mvtObject : mvtObjects) {
+            float[] color = mapStyle.getColor(mvtObject.getLayerName());
+            mvtObjectStyledList.add(new MvtObjectStyled(mvtObject, color));
+        }
+        // END STYLE MAP
+
+
+        // Convert to data input objects for OpenGL
+        List<FDOFloatBasicInput> fdoFloatBasicInputs = new ArrayList<>();
+        for(MvtObjectStyled mvtObjectStyled : mvtObjectStyledList) {
+            MvtObject mvtObject = mvtObjectStyled.getMvtObject();
+            if(mvtObject instanceof MvtPolygon) {
+                MvtPolygon polygon = (MvtPolygon) mvtObject;
+                fdoFloatBasicInputs.add(new FDOFloatBasicInput(
+                        polygon.getVertices(),
+                        polygon.triangles,
+                        2,
+                        4,
+                        (short)0,
+                        mvtObjectStyled.getColor()
+                ));
+            } else if(mvtObject instanceof MvtLines) {
+                MvtLines lines = (MvtLines) mvtObject;
+                fdoFloatBasicInputs.add(new FDOFloatBasicInput(
+                        lines.getVertices(),
+                        new int[] {},
+                        2,
+                        4,
+                        (short)1,
+                        mvtObjectStyled.getColor()
+                ));
             }
-        });
-        mapSurfaceView.requestRender();
+        }
+        // END Convert to data input objects for OpenGL
+
+        mapSurfaceView.getMapRenderer().getDrawFrame().addRenderProgramsInput(fdoFloatBasicInputs);
+        countDownLatchReady.countDown();
     }
 }

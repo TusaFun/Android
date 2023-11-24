@@ -1,4 +1,4 @@
-package com.jupiter.tusa.mvt;
+package com.jupiter.tusa.newmap.mvt;
 import java.util.ArrayList;
 import vector_tile.VectorTile;
 

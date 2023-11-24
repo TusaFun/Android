@@ -6,23 +6,22 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Environment;
-
 import com.google.common.util.concurrent.ListenableFuture;
-import com.jupiter.tusa.background.PeriodicWorkRequestHelper;
 import com.jupiter.tusa.background.TusaWorker;
 import com.jupiter.tusa.cache.CacheStorage;
 import com.jupiter.tusa.databinding.ActivityMainBinding;
 import com.jupiter.tusa.grpc.TusaGrpc;
-import com.jupiter.tusa.ui.CheckAvatarFragment;
+import com.jupiter.tusa.jnioutput.TriangleInput;
+import com.jupiter.tusa.jnioutput.TriangulateOutput;
 import com.jupiter.tusa.ui.LoginFragment;
 import com.jupiter.tusa.ui.MapFragment;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
@@ -110,14 +109,17 @@ public class MainActivity extends AppCompatActivity {
         long expirationTimestamp = sharedPreferences.getLong(TusaWorker.SharedPreferencesAccessTokenExpiresTimestampMillisecondsKey, 0);
         Date expirationTimestampDate = new Date(expirationTimestamp * 1000);
 
-        if(expirationTimestampDate.before(new Date())) {
-            LoginFragment loginFragment = new LoginFragment();
-            setFragment(loginFragment);
-        } else {
-            Fragment mainFragment = new MapFragment();
-            setFragment(mainFragment);
-            PeriodicWorkRequestHelper.requestMainWorker(getApplicationContext(), true);
-        }
+//        if(expirationTimestampDate.before(new Date())) {
+//            LoginFragment loginFragment = new LoginFragment();
+//            setFragment(loginFragment);
+//        } else {
+//            Fragment mainFragment = new MapFragment();
+//            setFragment(mainFragment);
+//            PeriodicWorkRequestHelper.requestMainWorker(getApplicationContext(), true);
+//        }
+
+        Fragment mainFragment = new MapFragment();
+        setFragment(mainFragment);
 
         if(getSupportActionBar() != null) {
             getSupportActionBar().hide();
@@ -141,5 +143,7 @@ public class MainActivity extends AppCompatActivity {
      */
     public native String stringFromJNI();
     public native byte[] compressJpegImage(byte[] inputImage, int quality);
-    //public native void drawImage();
+    public native ArrayList<TriangulateOutput> triangulate(ArrayList<TriangleInput> input);
+    public native TriangulateOutput triangulateOne(float[] vertices, int[] segments);
 }
+

@@ -1,18 +1,17 @@
-package com.jupiter.tusa.newmap.draw.gl.program;
+package com.jupiter.tusa.newmap.gl.program;
 
 import android.opengl.GLES20;
-import com.jupiter.tusa.newmap.draw.DrawMePlease;
-
+import com.jupiter.tusa.newmap.draw.DrawOpenGlProgram;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.List;
 
-public class FDOFloatTrianglesProgram implements DrawMePlease {
-    private List<FDOFloatTrianglesInput> input;
+public class FDOFloatBasicProgram implements DrawOpenGlProgram {
+    private List<FDOFloatBasicInput> input;
     private int mProgram;
 
-    public FDOFloatTrianglesProgram(
-            List<FDOFloatTrianglesInput> input,
+    public FDOFloatBasicProgram(
+            List<FDOFloatBasicInput> input,
             int fragmentShaderPointer,
             int vertexShaderPointer
     ) {
@@ -30,7 +29,7 @@ public class FDOFloatTrianglesProgram implements DrawMePlease {
         int handle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
         GLES20.glUniformMatrix4fv(handle, 1, false, mvpMatrix, 0);
 
-        for(FDOFloatTrianglesInput input : input) {
+        for(FDOFloatBasicInput input : input) {
             int coordinatesPerVertex = input.getCoordinatesPerVertex();
             int vertexStride = input.getVertexStride();
             int drawOrderLength = input.getDrawOrderLength();
@@ -51,7 +50,14 @@ public class FDOFloatTrianglesProgram implements DrawMePlease {
 
             int colorHandle = GLES20.glGetUniformLocation(mProgram, "vColor");
             GLES20.glUniform4fv(colorHandle, 1, color, 0);
-            GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrderLength, GLES20.GL_UNSIGNED_INT, drawListBuffer);
+            if(input.getDrawType() == 0) {
+                GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrderLength, GLES20.GL_UNSIGNED_INT, drawListBuffer);
+            } else if(input.getDrawType() == 1) {
+                int capacity = vertexBuffer.capacity();
+                GLES20.glLineWidth(20f);
+                GLES20.glDrawArrays(GLES20.GL_LINE_STRIP, 0, capacity / coordinatesPerVertex);
+            }
+
             GLES20.glDisableVertexAttribArray(vertexAttributePointerHandle);
         }
     }

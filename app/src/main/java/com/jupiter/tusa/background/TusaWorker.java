@@ -55,18 +55,18 @@ public class TusaWorker extends Worker {
 
         SharedPreferences.Editor editor = privatePreferences.edit();
         try {
-            Tusa.RefreshTokenReply reply = listenableRefreshTokenReply.get();
-            String newAccessToken = reply.getAccessToken();
-            String newRefreshToken = reply.getRefreshToken();
-            double newExpireInMilliseconds = reply.getExpireMillisecondsIn();
-            long newExpireTimestamp = reply.getExpirationTimestamp();
-
-            Date date = new Date();
-            editor.putString(SharedPreferencesLastUpdateKey, date.toString());
-            editor.putString(SharedPreferencesAccessTokenKey, newAccessToken);
-            editor.putString(SharedPreferencesRefreshTokenKey, newRefreshToken);
-            editor.putLong(SharedPreferencesAccessTokenExpiresTimestampMillisecondsKey, newExpireTimestamp);
-            editor.putFloat(SharedPreferencesAccessTokenExpiresInMillisecondsKey, (float) newExpireInMilliseconds);
+//            Tusa.RefreshTokenReply reply = listenableRefreshTokenReply.get();
+//            String newAccessToken = reply.getAccessToken();
+//            String newRefreshToken = reply.getRefreshToken();
+//            double newExpireInMilliseconds = reply.getExpireMillisecondsIn();
+//            long newExpireTimestamp = reply.getExpirationTimestamp();
+//
+//            Date date = new Date();
+//            editor.putString(SharedPreferencesLastUpdateKey, date.toString());
+//            editor.putString(SharedPreferencesAccessTokenKey, newAccessToken);
+//            editor.putString(SharedPreferencesRefreshTokenKey, newRefreshToken);
+//            editor.putLong(SharedPreferencesAccessTokenExpiresTimestampMillisecondsKey, newExpireTimestamp);
+//            editor.putFloat(SharedPreferencesAccessTokenExpiresInMillisecondsKey, (float) newExpireInMilliseconds);
         } catch (Exception exception) {
             exception.printStackTrace();
             return Result.failure();

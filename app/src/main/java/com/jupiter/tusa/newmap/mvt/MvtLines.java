@@ -1,11 +1,15 @@
-package com.jupiter.tusa.newmap.draw;
+package com.jupiter.tusa.newmap.mvt;
 
-public class Lines {
-    public float[] vertices;
-    public int dimension;
+import java.util.Map;
 
-    public Lines(float[] vertices, int dimension) {
-        this.vertices = vertices;
-        this.dimension = dimension;
+import vector_tile.VectorTile;
+
+public class MvtLines extends MvtObject {
+    public MvtLines(
+            float[] vertices,
+            String layerName,
+            Map<String, VectorTile.Tile.Value> tags
+    ) {
+        super(vertices, layerName, tags);
     }
 }

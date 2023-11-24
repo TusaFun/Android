@@ -1,18 +1,20 @@
-package com.jupiter.tusa.newmap.draw.gl.program;
+package com.jupiter.tusa.newmap.gl.program;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
-public class FDOFloatTrianglesInput {
+public class FDOFloatBasicInput {
     private int vertexStride;
     private int coordinatesPerVertex;
     private int drawOrderLength;
     private FloatBuffer vertexBuffer;
     private IntBuffer drawListBuffer;
     private float[] color;
+    private short drawType;
 
+    public short getDrawType() {return drawType;}
     public int getDrawOrderLength() {return drawOrderLength;}
     public int getCoordinatesPerVertex() {return coordinatesPerVertex;}
     public int getVertexStride() {return vertexStride;}
@@ -20,13 +22,15 @@ public class FDOFloatTrianglesInput {
     public IntBuffer getDrawListBuffer() {return drawListBuffer;}
     public float[] getColor() {return color;}
 
-    public FDOFloatTrianglesInput(
+    public FDOFloatBasicInput(
             float[] vertexCoordinates,
             int[] drawOrder,
             int coordinatesPerVertex,
             int sizeOfOneCoordinate,
+            short drawType,
             float[] color
     ) {
+        this.drawType = drawType;
         this.color = color;
         this.coordinatesPerVertex = coordinatesPerVertex;
         drawOrderLength = drawOrder.length;

@@ -1,10 +1,9 @@
-package com.jupiter.tusa.mvt;
+package com.jupiter.tusa.newmap.mvt;
 
 import android.content.Context;
-import android.util.Log;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.jupiter.tusa.newmap.draw.Lines;
+import com.google.protobuf.Value;
 import com.jupiter.tusa.utils.ArrayUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -16,6 +15,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import earcut4j.Earcut;
 import vector_tile.VectorTile;
 
 public class MvtUtils {
@@ -38,7 +38,7 @@ public class MvtUtils {
         return VectorTile.Tile.parseFrom(allBytes);
     }
 
-    public static int getParameter(int geometry) {
+    private static int getParameter(int geometry) {
         return  ((geometry >> 1) ^ (-(geometry & 1)));
     }
 
@@ -55,15 +55,59 @@ public class MvtUtils {
         return newArray;
     }
 
-    public static List<Lines> readLines(VectorTile.Tile.Feature feature) {
+    public static List<MvtPolygon> readPolygons(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
         int dimension = 2;
-        List<Lines> linesInputs = new ArrayList<>();
+        List<MvtPolygon> mvtPolygons = new ArrayList<>();
+        MvtGeometryRead mvtGeometryRead = MvtUtils.readFeatureGeometry(feature);
+
+        for(int i = 0; i < mvtGeometryRead.vertices.size(); ) {
+            Vertices vertices = mvtGeometryRead.vertices.get(i);
+            List<List<Float>> nextInteriorRings = new ArrayList<>();
+
+            i += 1;
+            while (i < mvtGeometryRead.vertices.size()) {
+                Vertices next = mvtGeometryRead.vertices.get(i);
+                if(!next.getClockwise())
+                    break;
+                nextInteriorRings.add(next.vertices);
+                i += 1;
+            }
+
+            List<Integer> holesIndices = new ArrayList<>();
+            List<Float> verticesWithHoleVertices = new ArrayList<>(vertices.vertices);
+            for(int interior = 0; interior < nextInteriorRings.size(); interior++) {
+                List<Float> interiorRing = nextInteriorRings.get(interior);
+                holesIndices.add(verticesWithHoleVertices.size() / dimension);
+                verticesWithHoleVertices.addAll(interiorRing);
+            }
+
+            double[] points = ArrayUtils.floatToDouble(verticesWithHoleVertices);
+            int[] holesInt = ArrayUtils.ToArrayInt(holesIndices);
+            if(holesInt.length == 0) {
+                holesInt = null;
+            }
+            List<Integer> triangles = Earcut.earcut(points, holesInt, dimension);
+            float[] verticesArray = ArrayUtils.ToArray(verticesWithHoleVertices);
+            mvtPolygons.add(new MvtPolygon(
+                            verticesArray,
+                            ArrayUtils.ToArrayInt(triangles),
+                            layer.getName(),
+                            readTags(layer, feature)
+                    )
+            );
+        }
+        return mvtPolygons;
+    }
+
+    public static List<MvtLines> readLines(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
+        List<MvtLines> linesInputs = new ArrayList<>();
         MvtGeometryRead mvtGeometryRead = readFeatureGeometry(feature);
         for(Vertices vertices : mvtGeometryRead.vertices) {
             float[] pointsFloat = ArrayUtils.ToArray(vertices.vertices);
-            //float[] withZPoints = MvtUtils.insertZOrderTo2D(ArrayUtils.ToArray(vertices.vertices), 1f);
-            linesInputs.add(new Lines(
-                    pointsFloat, dimension
+            linesInputs.add(new MvtLines(
+                    pointsFloat,
+                    layer.getName(),
+                    readTags(layer, feature)
             ));
         }
         return linesInputs;

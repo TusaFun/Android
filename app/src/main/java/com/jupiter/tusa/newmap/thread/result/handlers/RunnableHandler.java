@@ -1,5 +1,5 @@
-package com.jupiter.tusa.map.thread.result.handlers;
+package com.jupiter.tusa.newmap.thread.result.handlers;
 
 public interface RunnableHandler<T> {
-    public void handle(T input);
+    void handle(T input);
 }
