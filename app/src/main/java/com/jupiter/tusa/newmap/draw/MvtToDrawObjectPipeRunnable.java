@@ -1,5 +1,8 @@
 package com.jupiter.tusa.newmap.draw;
 
+import android.util.Log;
+
+import com.google.android.gms.maps.model.Polygon;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.jupiter.tusa.cache.template.CacheBytes;
 import com.jupiter.tusa.newmap.MapSurfaceView;
@@ -16,7 +19,10 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import vector_tile.VectorTile;
 
@@ -39,6 +45,10 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
 
     @Override
     public void run() {
+        int tileZ = mvtApiResource.z;
+        int tileX = mvtApiResource.x;
+        int tileY = mvtApiResource.y;
+
         // GET TILE
         byte[] tile = cacheBytes.get(mvtApiResource.tileKey());
         if(tile == null) {
@@ -65,6 +75,7 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
             }
         }
         if(tile == null) {
+            Log.w("GL_ARTEM", String.format("Не могу загрузить тайл x%d y%d z%d", tileX, tileY, tileZ));
             countDownLatchReady.countDown();
             return;
         }
@@ -72,8 +83,7 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
 
 
         // READ MVT VECTOR DATA
-        MapStyleList mapStyleList = mapSurfaceView.getMapStyle();
-        MapStyle mapStyle = mapStyleList.getStyleFor(mvtApiResource.z);
+        MapStyle mapStyle = mapSurfaceView.getMapStyle();
         VectorTile.Tile mvtTile = null;
         try {
            mvtTile = MvtUtils.parse(tile);
@@ -82,43 +92,47 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
         }
         assert mvtTile != null;
 
-        List<MvtObject> mvtObjects = new ArrayList<>();
+        Map<String, List<MvtObject>> mvtObjectsMap = new HashMap<>();
         List<VectorTile.Tile.Layer> layers = mvtTile.getLayersList();
         for(VectorTile.Tile.Layer layer : layers) {
-            if(!mapStyle.showLayers.contains(layer.getName())) {
-                //Log.d("GL_ARTEM", String.format("layer skipped %s", layer.getName()));
-                continue;
-            }
-
+            List<MvtObject> mvtLayerObjects = new ArrayList<>();
             for(VectorTile.Tile.Feature feature : layer.getFeaturesList()) {
                 if(feature.getType() == VectorTile.Tile.GeomType.POLYGON) {
-                    mvtObjects.addAll(MvtUtils.readPolygons(feature, layer));
+                    List<MvtPolygon> polygons = MvtUtils.readPolygons(feature, layer);
+                    mvtLayerObjects.addAll(polygons);
                 } else if(feature.getType() == VectorTile.Tile.GeomType.LINESTRING) {
-                    mvtObjects.addAll(MvtUtils.readLines(feature, layer));
+                    List<MvtLines> lines = MvtUtils.readLines(feature, layer);
+                    mvtLayerObjects.addAll(lines);
                 }
             }
+            mvtObjectsMap.put(layer.getName(), mvtLayerObjects);
         }
         // END READ MVT VECTOR DATA
 
 
-        // MOVE TILE
-        int tileZ = mvtApiResource.z;
-        int tileX = mvtApiResource.x;
-        int tileY = mvtApiResource.y;
-        TileWorldCoordinates tileWorldCoordinates = new TileWorldCoordinates();
-        for(MvtObject mvtObject: mvtObjects) {
-            tileWorldCoordinates.applyToTileMvt(mvtObject, tileX, tileY, tileZ);
-        }
-        // END MOVE TILE
-
-
         // STYLE MAP
         List<MvtObjectStyled> mvtObjectStyledList = new ArrayList<>();
-        for (MvtObject mvtObject : mvtObjects) {
-            float[] color = mapStyle.getColor(mvtObject.getLayerName());
-            mvtObjectStyledList.add(new MvtObjectStyled(mvtObject, color));
+        for (String layer : mapStyle.showLayers) {
+            List<MvtObject> mvtObjects = mvtObjectsMap.get(layer);
+            if(mvtObjects == null) continue;
+            for(MvtObject mvtObject : mvtObjects) {
+                Map<String, VectorTile.Tile.Value> tags = mvtObject.getTags();
+                MapStyleParameters parameters = mapStyle.getStyleParametersForFeature(mvtObject.getLayerName(), tags, tileZ);
+                mvtObjectStyledList.add(new MvtObjectStyled(
+                        mvtObject,
+                        parameters
+                ));
+            }
         }
         // END STYLE MAP
+
+
+        // MOVE TILE
+        TileWorldCoordinates tileWorldCoordinates = new TileWorldCoordinates();
+        for(MvtObjectStyled mvtObjectStyled: mvtObjectStyledList) {
+            tileWorldCoordinates.applyToTileMvt(mvtObjectStyled, tileX, tileY, tileZ);
+        }
+        // END MOVE TILE
 
 
         // Convert to data input objects for OpenGL
@@ -130,20 +144,22 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
                 fdoFloatBasicInputs.add(new FDOFloatBasicInput(
                         polygon.getVertices(),
                         polygon.triangles,
-                        2,
-                        4,
+                        polygon.getCoordinatesPerVertex(),
+                        polygon.getSizeOfOneCoordinate(),
                         (short)0,
-                        mvtObjectStyled.getColor()
+                        mvtObjectStyled.getParameters().getColor(),
+                        mvtObjectStyled.getParameters().getLineWidth()
                 ));
             } else if(mvtObject instanceof MvtLines) {
                 MvtLines lines = (MvtLines) mvtObject;
                 fdoFloatBasicInputs.add(new FDOFloatBasicInput(
                         lines.getVertices(),
                         new int[] {},
-                        2,
-                        4,
+                        lines.getCoordinatesPerVertex(),
+                        lines.getSizeOfOneCoordinate(),
                         (short)1,
-                        mvtObjectStyled.getColor()
+                        mvtObjectStyled.getParameters().getColor(),
+                        mvtObjectStyled.getParameters().getLineWidth()
                 ));
             }
         }

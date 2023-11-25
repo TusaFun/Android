@@ -1,7 +1,6 @@
-package com.jupiter.tusa.newmap.gl;
+package com.jupiter.tusa.newmap;
 
 import android.opengl.Matrix;
-import com.jupiter.tusa.newmap.MapMath;
 
 public class MapWorldCamera {
     private float x;
@@ -68,13 +67,10 @@ public class MapWorldCamera {
     private void newPosition() {
         float maxFieldOfView = 60;
         float maxEyeZ = (float) Math.pow(2, 19);
-        float k = 10;
-        float multiply = (float) (Math.pow(initScaleFactor, 4));
-        float resultZoomK = multiply;
+        float resultZoomK = (float) (Math.pow(initScaleFactor, DistanceToTileZ.zoomingParabolaPower));
 
         float fieldOfView = maxFieldOfView * resultZoomK;
         float eyeZ = maxEyeZ * resultZoomK;
-        //Log.d("GL_ARTEM", String.format("Result zoom k = %.3f, portion = %.3f", resultZoomK, distancePortion));
 
         float viewZDelta = 10f;
         Matrix.setLookAtM(viewMatrix, 0, x, y, eyeZ, x, y, 0f, 0f, 1.0f, 0.0f);

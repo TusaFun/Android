@@ -1,7 +1,5 @@
 package com.jupiter.tusa.newmap;
 
-import com.jupiter.tusa.newmap.gl.MapWorldCamera;
-
 public class MapTilesShowerMapState {
     private int tileZ;
     private MapWorldCamera mapWorldCamera;

@@ -13,7 +13,9 @@ public class FDOFloatBasicInput {
     private IntBuffer drawListBuffer;
     private float[] color;
     private short drawType;
+    private float lineWidth;
 
+    public float getLineWidth() {return lineWidth;}
     public short getDrawType() {return drawType;}
     public int getDrawOrderLength() {return drawOrderLength;}
     public int getCoordinatesPerVertex() {return coordinatesPerVertex;}
@@ -28,8 +30,10 @@ public class FDOFloatBasicInput {
             int coordinatesPerVertex,
             int sizeOfOneCoordinate,
             short drawType,
-            float[] color
+            float[] color,
+            float lineWidth
     ) {
+        this.lineWidth = lineWidth;
         this.drawType = drawType;
         this.color = color;
         this.coordinatesPerVertex = coordinatesPerVertex;

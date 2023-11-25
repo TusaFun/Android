@@ -4,7 +4,6 @@ import androidx.core.math.MathUtils;
 
 import com.jupiter.tusa.cache.template.CacheBytes;
 import com.jupiter.tusa.newmap.draw.MvtToDrawObjectPipeRunnable;
-import com.jupiter.tusa.newmap.gl.MapWorldCamera;
 import com.jupiter.tusa.newmap.load.tiles.AllTilesLoadPipelinesReadyRunnable;
 import com.jupiter.tusa.newmap.load.tiles.MvtApiResource;
 
@@ -18,6 +17,7 @@ public class MapTilesShower {
     CacheBytes cacheBytes;
     private final MapSurfaceView mapSurfaceView;
     private CountDownLatch patchTilesReadyCount;
+    private boolean showTestTile = false;
 
     public MapTilesShower(
             MapSurfaceView mapSurfaceView
@@ -27,6 +27,12 @@ public class MapTilesShower {
     }
 
     public void nextMapState(MapTilesShowerMapState state) {
+        if(showTestTile) {
+            patchTilesReadyCount = new CountDownLatch(1);
+            executorWaitPatch.execute(new AllTilesLoadPipelinesReadyRunnable(patchTilesReadyCount, mapSurfaceView));
+            nextTile(2, 1, 0);
+            return;
+        }
         MapWorldCamera camera = state.getMapWorldCamera();
         float[] bottomRightCorner = camera.getBottomRightWorldViewCoordinates();
         float[] upperLeftCorner = camera.getUpperLeftWorldViewCoordinates();
@@ -52,6 +58,7 @@ public class MapTilesShower {
         endYTile = MathUtils.clamp(endYTile, 0, maxTileNumber);
 
         int amount = (endXTile - startXTile + 1) * (endYTile - startYTile + 1);
+
         patchTilesReadyCount = new CountDownLatch(amount);
         executorWaitPatch.execute(new AllTilesLoadPipelinesReadyRunnable(patchTilesReadyCount, mapSurfaceView));
 

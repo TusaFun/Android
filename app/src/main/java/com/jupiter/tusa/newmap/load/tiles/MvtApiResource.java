@@ -3,7 +3,7 @@ package com.jupiter.tusa.newmap.load.tiles;
 import java.util.Locale;
 
 public class MvtApiResource {
-    public String style = "mapbox.mapbox-streets-v8";
+    public String style = "mapbox.mapbox-streets-v8,mapbox.mapbox-terrain-v2";
     public int z;
     public int x;
     public int y;

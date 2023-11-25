@@ -10,8 +10,7 @@ import android.view.ScaleGestureDetector;
 import androidx.annotation.NonNull;
 import com.jupiter.tusa.MainActivity;
 import com.jupiter.tusa.cache.CacheStorage;
-import com.jupiter.tusa.newmap.draw.MapStyleList;
-import com.jupiter.tusa.newmap.gl.MapWorldCamera;
+import com.jupiter.tusa.newmap.draw.MapStyle;
 import com.jupiter.tusa.newmap.thread.result.handlers.GlSurfaceChangedHandler;
 import com.jupiter.tusa.newmap.thread.result.handlers.GlSurfaceCreatedHandler;
 
@@ -34,7 +33,7 @@ public class MapSurfaceView extends GLSurfaceView {
     private float currentMapY;
     private float previousScreenX;
     private float previousScreenY;
-    private final MapStyleList mapStyleList = new MapStyleList();
+    private final MapStyle mapStyle = new MapStyle();
 
     private int maxTileZoom = 19;
     private int currentTileZ;
@@ -44,8 +43,8 @@ public class MapSurfaceView extends GLSurfaceView {
     public MapRenderer getMapRenderer() {
         return mapRenderer;
     }
-    public MapStyleList getMapStyle() {
-        return mapStyleList;
+    public MapStyle getMapStyle() {
+        return mapStyle;
     }
     public MapTilesShower getMapTilesShower() {return mapTilesShower;}
 
@@ -54,7 +53,7 @@ public class MapSurfaceView extends GLSurfaceView {
         mainActivity = (MainActivity) context;
         distanceToTileZ = new DistanceToTileZ(maxTileZoom);
 
-        float initScaleFactor = distanceToTileZ.calcDistanceForZ(8);
+        float initScaleFactor = distanceToTileZ.calcDistanceForZ(1);
         mapScaleListener = new MapScaleListener(initScaleFactor);
         currentTileZ = distanceToTileZ.calcCurrentTileZ(initScaleFactor);
 

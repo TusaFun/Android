@@ -1,9 +1,11 @@
 package com.jupiter.tusa.newmap.mvt;
 
 import android.content.Context;
+import android.util.Printer;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Value;
+import com.jupiter.tusa.newmap.earcut.EarCutDeer;
 import com.jupiter.tusa.utils.ArrayUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -81,12 +83,12 @@ public class MvtUtils {
                 verticesWithHoleVertices.addAll(interiorRing);
             }
 
-            double[] points = ArrayUtils.floatToDouble(verticesWithHoleVertices);
+            float[] points = ArrayUtils.ToArray(verticesWithHoleVertices);
             int[] holesInt = ArrayUtils.ToArrayInt(holesIndices);
             if(holesInt.length == 0) {
                 holesInt = null;
             }
-            List<Integer> triangles = Earcut.earcut(points, holesInt, dimension);
+            List<Integer> triangles = EarCutDeer.earcut(points, holesInt, dimension);
             float[] verticesArray = ArrayUtils.ToArray(verticesWithHoleVertices);
             mvtPolygons.add(new MvtPolygon(
                             verticesArray,
@@ -104,6 +106,7 @@ public class MvtUtils {
         MvtGeometryRead mvtGeometryRead = readFeatureGeometry(feature);
         for(Vertices vertices : mvtGeometryRead.vertices) {
             float[] pointsFloat = ArrayUtils.ToArray(vertices.vertices);
+
             linesInputs.add(new MvtLines(
                     pointsFloat,
                     layer.getName(),
@@ -220,13 +223,12 @@ public class MvtUtils {
         return new MvtGeometryRead(verticesArray, geomType);
     }
 
-
     public static Map<String, VectorTile.Tile.Value> readTags(VectorTile.Tile.Layer layer, VectorTile.Tile.Feature feature) {
-        List<Integer> features = feature.getTagsList();
+        List<Integer> tags = feature.getTagsList();
         Map<String, VectorTile.Tile.Value> map = new HashMap<>();
-        for(int i = 0; i < features.size() / 2; i++) {
-            int keyIndex = features.get(i * 2);
-            int valueIndex = features.get(i * 2 + 1);
+        for(int i = 0; i < tags.size() / 2; i++) {
+            int keyIndex = tags.get(i * 2);
+            int valueIndex = tags.get(i * 2 + 1);
             String key = layer.getKeys(keyIndex);
             VectorTile.Tile.Value value = layer.getValues(valueIndex);
             map.put(key, value);
@@ -249,15 +251,27 @@ public class MvtUtils {
         return sum < 0;
     }
 
-    public static int[] makeSequentSegments(int coordinatesArrayLength) {
-        int[] segments = new int[coordinatesArrayLength];
-        segments[0] = 0;
-        for(int i = 1; i < coordinatesArrayLength / 2; i++) {
-            int shift = i + (i - 1);
-            segments[shift] = i;
-            segments[shift + 1] = i;
+    public static String mapToString(Map<String, VectorTile.Tile.Value> tags) {
+        StringBuilder stringBuilder = new StringBuilder("{");
+
+        for (Map.Entry<String, VectorTile.Tile.Value> entry : tags.entrySet()) {
+            String key = entry.getKey();
+            VectorTile.Tile.Value value = entry.getValue();
+
+            // Convert the Value to a string representation
+            String valueString = value.getStringValue();
+
+            // Append the key-value pair to the result string
+            stringBuilder.append("\"").append(key).append("\":").append(valueString).append(", ");
         }
-        segments[coordinatesArrayLength - 1] = 0;
-        return segments;
+
+        // Remove the trailing comma and space if there are entries in the map
+        if (!tags.isEmpty()) {
+            stringBuilder.setLength(stringBuilder.length() - 2);
+        }
+
+        stringBuilder.append("}");
+
+        return stringBuilder.toString();
     }
 }

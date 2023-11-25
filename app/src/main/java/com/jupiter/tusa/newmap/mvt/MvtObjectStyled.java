@@ -1,14 +1,16 @@
 package com.jupiter.tusa.newmap.mvt;
 
+import com.jupiter.tusa.newmap.draw.MapStyleParameters;
+
 public class MvtObjectStyled {
     private MvtObject mvtObject;
-    private float[] color;
+    private MapStyleParameters parameters;
 
     public MvtObject getMvtObject() {return mvtObject;}
-    public float[] getColor() {return color;}
+    public MapStyleParameters getParameters() {return parameters;}
 
-    public MvtObjectStyled(MvtObject mvtObject, float[] color) {
+    public MvtObjectStyled(MvtObject mvtObject, MapStyleParameters mapStyleParameters) {
         this.mvtObject = mvtObject;
-        this.color = color;
+        this.parameters = mapStyleParameters;
     }
 }
