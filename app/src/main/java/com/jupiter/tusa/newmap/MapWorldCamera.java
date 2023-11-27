@@ -72,7 +72,7 @@ public class MapWorldCamera {
         float fieldOfView = maxFieldOfView * resultZoomK;
         float eyeZ = maxEyeZ * resultZoomK;
 
-        float viewZDelta = 10f;
+        float viewZDelta = 1f;
         Matrix.setLookAtM(viewMatrix, 0, x, y, eyeZ, x, y, 0f, 0f, 1.0f, 0.0f);
         Matrix.perspectiveM(projectionMatrix, 0, fieldOfView, ratio, eyeZ - viewZDelta, eyeZ + viewZDelta);
         Matrix.multiplyMM(modelViewMatrix, 0, projectionMatrix, 0, viewMatrix, 0);

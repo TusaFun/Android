@@ -1,5 +1,9 @@
 package com.jupiter.tusa.newmap.gl.program;
 
+import android.opengl.GLES20;
+
+import com.jupiter.tusa.newmap.mvt.MvtShapes;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -12,11 +16,11 @@ public class FDOFloatBasicInput {
     private FloatBuffer vertexBuffer;
     private IntBuffer drawListBuffer;
     private float[] color;
-    private short drawType;
+    private int drawMode;
     private float lineWidth;
 
     public float getLineWidth() {return lineWidth;}
-    public short getDrawType() {return drawType;}
+    public int getDrawMode() {return drawMode;}
     public int getDrawOrderLength() {return drawOrderLength;}
     public int getCoordinatesPerVertex() {return coordinatesPerVertex;}
     public int getVertexStride() {return vertexStride;}
@@ -29,12 +33,12 @@ public class FDOFloatBasicInput {
             int[] drawOrder,
             int coordinatesPerVertex,
             int sizeOfOneCoordinate,
-            short drawType,
+            int drawMode,
             float[] color,
             float lineWidth
     ) {
         this.lineWidth = lineWidth;
-        this.drawType = drawType;
+        this.drawMode = drawMode;
         this.color = color;
         this.coordinatesPerVertex = coordinatesPerVertex;
         drawOrderLength = drawOrder.length;
@@ -51,5 +55,16 @@ public class FDOFloatBasicInput {
         drawListBuffer = dlb.asIntBuffer();
         drawListBuffer.put(drawOrder);
         drawListBuffer.position(0);
+    }
+
+    public static int getModeFromMvtShape(MvtShapes shape) {
+        if(shape == MvtShapes.LINE) {
+            return GLES20.GL_LINES;
+        }
+        if(shape == MvtShapes.POLYGON) {
+            return GLES20.GL_TRIANGLES;
+        }
+
+        return -1;
     }
 }

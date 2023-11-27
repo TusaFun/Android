@@ -51,7 +51,7 @@ public class FDOFloatBasicProgram implements DrawOpenGlProgram {
             int colorHandle = GLES20.glGetUniformLocation(mProgram, "vColor");
             GLES20.glUniform4fv(colorHandle, 1, color, 0);
             GLES20.glLineWidth(input.getLineWidth());
-            int mode = input.getDrawType() == 0 ? GLES20.GL_TRIANGLES : GLES20.GL_LINES;
+            int mode = input.getDrawMode();
             GLES20.glDrawElements(mode, drawOrderLength, GLES20.GL_UNSIGNED_INT, drawListBuffer);
 
             GLES20.glDisableVertexAttribArray(vertexAttributePointerHandle);

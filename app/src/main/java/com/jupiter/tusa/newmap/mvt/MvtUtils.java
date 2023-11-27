@@ -56,7 +56,7 @@ public class MvtUtils {
         return newArray;
     }
 
-    public static MvtPolygons readPolygons(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
+    public static MvtObject readPolygons(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
         int dimension = 2;
         MvtGeometryRead mvtGeometryRead = MvtUtils.readFeatureGeometry(feature);
 
@@ -97,15 +97,16 @@ public class MvtUtils {
             }
             resultVertices.addAll(verticesWithHoleVertices);
         }
-        return new MvtPolygons(
+        return new MvtObject(
                 ArrayUtils.ToArray(resultVertices),
                 ArrayUtils.ToArrayInt(resultDrawOrder),
                 layer.getName(),
-                readTags(layer, feature)
+                readTags(layer, feature),
+                MvtShapes.POLYGON
         );
     }
 
-    public static MvtLines readLines(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
+    public static MvtObject readLines(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
         MvtGeometryRead mvtGeometryRead = readFeatureGeometry(feature);
         int dimension = 2;
         List<Float> resultPoints = new ArrayList<>();
@@ -120,11 +121,12 @@ public class MvtUtils {
 
             resultPoints.addAll(vertices.vertices);
         }
-        return new MvtLines(
+        return new MvtObject(
                 ArrayUtils.ToArray(resultPoints),
                 ArrayUtils.ToArrayInt(resultDrawOrder),
                 layer.getName(),
-                readTags(layer, feature)
+                readTags(layer, feature),
+                MvtShapes.LINE
         );
     }
 

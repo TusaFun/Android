@@ -46,6 +46,8 @@ public class MapRenderer implements GLSurfaceView.Renderer {
         float[] landColor = ColorUtils.hslaToRgba(60, 0, 100, 1);
         GLES20.glClearColor(landColor[0], landColor[1], landColor[2], landColor[3]);
         GLES20.glEnable(GLES20.GL_BLEND);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDepthFunc(GLES20.GL_LESS);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 
         shadersBuilderAndStorage.saveAndBuild("basic", R.raw.basic_vertex_shader, R.raw.basic_fragment_shader);
@@ -60,7 +62,7 @@ public class MapRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public void onDrawFrame(GL10 gl) {
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
         float[] modelViewMatrix = mapWorldCamera.getModelViewMatrix();
 
         for (DrawOpenGlProgram drawMePlease : drawFrame.getDrawMePlease()) {

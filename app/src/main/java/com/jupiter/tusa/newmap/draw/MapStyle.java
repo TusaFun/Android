@@ -16,11 +16,11 @@ public class MapStyle {
     public List<String> showLayers = new ArrayList<String>()
     {{
 
-//        add("natural_label");
+        //add("natural_label");
         add("landcover");
-//        add("hillshade");
-//        add("water");
-//        add("landuse");
+        //add("hillshade");
+        add("water");
+        //add("landuse");
 //        add("road");
 //        add("landuse_overlay");
 //        add("waterway");
@@ -35,50 +35,42 @@ public class MapStyle {
         add("admin");
     }};
 
+
+
     public MapStyleParameters getStyleParametersForFeature(String name, Map<String, VectorTile.Tile.Value> tags, int zoom) {
         MapStyleParameters mapStyleParameters = new MapStyleParameters();
+        if(Objects.equals(name, "landcover")) {
+            mapStyleParameters.setZ(0f);
+            if(tags.containsKey("class")) {
+                String classValue = Objects.requireNonNull(tags.get("class")).getStringValue();
+                if(classValue.equals("wood")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(105, 56, 72, 0.8f));
+                    mapStyleParameters.setZ(0.1f);
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("snow")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(197, 68, 88, 1f));
+                    return mapStyleParameters;
+                }
+            }
+            mapStyleParameters.setColor(ColorUtils.hslaToRgba(100, 57, 89, 1));
+            return mapStyleParameters;
+        }
+
         if(Objects.equals(name, "water")) {
+            mapStyleParameters.setZ(0.01f);
             mapStyleParameters.setColor(ColorUtils.hslaToRgba(197, 98, 78, 1));
             return mapStyleParameters;
         }
 
-        if(Objects.equals(name, "admin")) {
-            boolean disputed = Objects.requireNonNull(tags.get("disputed")).getBoolValue();
-            String iso = Objects.requireNonNull(tags.get("iso_3166_1")).getStringValue();
-            boolean insideCountry = !iso.contains("-");
-            float adminWidth = 5f;
-            if(insideCountry) {
-                mapStyleParameters.setLineWidth(adminWidth / 2);
-                mapStyleParameters.setColor(ColorUtils.hslaToRgba(250, 90, 85, 1f));
-            } else {
-                mapStyleParameters.setColor(ColorUtils.hslaToRgba(250, 90, 80, 1f));
-                mapStyleParameters.setLineWidth(adminWidth);
-            }
-
-            if(disputed) {
-                mapStyleParameters.setColor(ColorUtils.hslaToRgba(250, 90, 80, 1f));
-                mapStyleParameters.setLineWidth(adminWidth / 2);
-            }
-
-            return mapStyleParameters;
-        }
-
-        if(Objects.equals(name, "waterway")) {
-            mapStyleParameters.setColor(ColorUtils.hslaToRgba(197, 98, 78, 1));
-            return mapStyleParameters;
-        }
-
-        if(Objects.equals(name, "pitch-outline")) {
-            mapStyleParameters.setColor(ColorUtils.hslaToRgba(90, 76, 75, 1));
-            return mapStyleParameters;
-        }
-
-        if(Objects.equals(name, "national-park")) {
-            mapStyleParameters.setColor(ColorUtils.hslaToRgba(100, 37, 78, 1));
+        if(name.equals("hillshade")) {
+            mapStyleParameters.setZ(0.02f);
+            mapStyleParameters.setColor(ColorUtils.hslaToRgba(86, 25, 57, 1));
             return mapStyleParameters;
         }
 
         if(Objects.equals(name, "land")) {
+            mapStyleParameters.setZ(0.03f);
             if(zoom == 9) {
                 mapStyleParameters.setColor(ColorUtils.hslaToRgba(60, 0, 100, 1));
                 return mapStyleParameters;
@@ -91,23 +83,14 @@ public class MapStyle {
             return mapStyleParameters;
         }
 
-        if(Objects.equals(name, "landcover")) {
-            if(tags.containsKey("class")) {
-                String classValue = Objects.requireNonNull(tags.get("class")).getStringValue();
-                if(classValue.equals("wood")) {
-                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(105, 56, 72, 0.8f));
-                    return mapStyleParameters;
-                }
-                if(classValue.equals("snow")) {
-                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(197, 68, 88, 1f));
-                    return mapStyleParameters;
-                }
-            }
-            mapStyleParameters.setColor(ColorUtils.hslaToRgba(100, 57, 89, 1));
+        if(Objects.equals(name, "waterway")) {
+            mapStyleParameters.setZ(0.04f);
+            mapStyleParameters.setColor(ColorUtils.hslaToRgba(197, 98, 78, 1));
             return mapStyleParameters;
         }
 
         if(Objects.equals(name, "landuse") && zoom == 15 || zoom == 16) {
+            mapStyleParameters.setZ(0.04f);
             if(tags.containsKey("class")) {
                 String classValue = Objects.requireNonNull(tags.get("class")).getStringValue();
                 if(classValue.equals("wood")) {
@@ -179,8 +162,36 @@ public class MapStyle {
             return mapStyleParameters;
         }
 
-        if(name.equals("hillshade")) {
-            mapStyleParameters.setColor(ColorUtils.hslaToRgba(86, 25, 57, 1));
+        if(Objects.equals(name, "pitch-outline")) {
+            mapStyleParameters.setZ(0.05f);
+            mapStyleParameters.setColor(ColorUtils.hslaToRgba(90, 76, 75, 1));
+            return mapStyleParameters;
+        }
+
+        if(Objects.equals(name, "national-park")) {
+            mapStyleParameters.setZ(0.06f);
+            mapStyleParameters.setColor(ColorUtils.hslaToRgba(100, 37, 78, 1));
+            return mapStyleParameters;
+        }
+
+        if(Objects.equals(name, "admin")) {
+            mapStyleParameters.setZ(0.07f);
+            boolean disputed = Objects.requireNonNull(tags.get("disputed")).getBoolValue();
+            String iso = Objects.requireNonNull(tags.get("iso_3166_1")).getStringValue();
+            boolean insideCountry = !iso.contains("-");
+            float adminWidth = 4.5f;
+            if(insideCountry) {
+                mapStyleParameters.setLineWidth(adminWidth / 2);
+                mapStyleParameters.setColor(ColorUtils.hslaToRgba(250, 90, 85, 1f));
+            } else {
+                mapStyleParameters.setColor(ColorUtils.hslaToRgba(250, 90, 80, 1f));
+                mapStyleParameters.setLineWidth(adminWidth);
+            }
+
+            if(disputed) {
+                mapStyleParameters.setColor(ColorUtils.hslaToRgba(250, 90, 80, 1f));
+                mapStyleParameters.setLineWidth(adminWidth / 2);
+            }
             return mapStyleParameters;
         }
 

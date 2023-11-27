@@ -1,24 +1,20 @@
 package com.jupiter.tusa.newmap.draw;
 
 import android.util.Log;
-
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.jupiter.tusa.cache.template.CacheBytes;
 import com.jupiter.tusa.newmap.MapSurfaceView;
 import com.jupiter.tusa.newmap.TileWorldCoordinates;
 import com.jupiter.tusa.newmap.gl.program.FDOFloatBasicInput;
 import com.jupiter.tusa.newmap.load.tiles.MvtApiResource;
-import com.jupiter.tusa.newmap.mvt.MvtLines;
 import com.jupiter.tusa.newmap.mvt.MvtObject;
 import com.jupiter.tusa.newmap.mvt.MvtObjectStyled;
-import com.jupiter.tusa.newmap.mvt.MvtPolygons;
 import com.jupiter.tusa.newmap.mvt.MvtUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -90,76 +86,58 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
         }
         assert mvtTile != null;
 
-        Map<String, List<MvtObject>> mvtObjectsMap = new HashMap<>();
+        List<MvtObject> mvtObjects = new ArrayList<>();
         List<VectorTile.Tile.Layer> layers = mvtTile.getLayersList();
         for(VectorTile.Tile.Layer layer : layers) {
-            List<MvtObject> mvtLayerObjects = new ArrayList<>();
             for(VectorTile.Tile.Feature feature : layer.getFeaturesList()) {
                 if(feature.getType() == VectorTile.Tile.GeomType.POLYGON) {
-                    MvtPolygons polygons = MvtUtils.readPolygons(feature, layer);
-                    mvtLayerObjects.add(polygons);
+                    MvtObject polygons = MvtUtils.readPolygons(feature, layer);
+                    mvtObjects.add(polygons);
                 } else if(feature.getType() == VectorTile.Tile.GeomType.LINESTRING) {
-                    MvtLines lines = MvtUtils.readLines(feature, layer);
-                    mvtLayerObjects.add(lines);
+                    MvtObject lines = MvtUtils.readLines(feature, layer);
+                    mvtObjects.add(lines);
                 }
             }
-            mvtObjectsMap.put(layer.getName(), mvtLayerObjects);
         }
         // END READ MVT VECTOR DATA
+
+        // MOVE TILE
+        TileWorldCoordinates tileWorldCoordinates = new TileWorldCoordinates();
+        for(MvtObject mvtObject: mvtObjects) {
+            tileWorldCoordinates.applyToTileMvt(mvtObject, tileX, tileY, tileZ);
+        }
+        // END MOVE TILE
 
 
         // STYLE MAP
         List<MvtObjectStyled> mvtObjectStyledList = new ArrayList<>();
-        for (String layer : mapStyle.showLayers) {
-            List<MvtObject> mvtObjects = mvtObjectsMap.get(layer);
-            if(mvtObjects == null) continue;
-            for(MvtObject mvtObject : mvtObjects) {
-                Map<String, VectorTile.Tile.Value> tags = mvtObject.getTags();
-                MapStyleParameters parameters = mapStyle.getStyleParametersForFeature(mvtObject.getLayerName(), tags, tileZ);
-                mvtObjectStyledList.add(new MvtObjectStyled(
-                        mvtObject,
-                        parameters
-                ));
+        for(MvtObject mvtObject : mvtObjects) {
+            if(!mapStyle.showLayers.contains(mvtObject.getLayerName())) {
+                continue;
             }
+            Map<String, VectorTile.Tile.Value> tags = mvtObject.getTags();
+            MapStyleParameters parameters = mapStyle.getStyleParametersForFeature(mvtObject.getLayerName(), tags, tileZ);
+            mvtObjectStyledList.add(new MvtObjectStyled(
+                    mvtObject,
+                    parameters
+            ));
         }
         // END STYLE MAP
 
-
-        // MOVE TILE
-        TileWorldCoordinates tileWorldCoordinates = new TileWorldCoordinates();
-        for(MvtObjectStyled mvtObjectStyled: mvtObjectStyledList) {
-            tileWorldCoordinates.applyToTileMvt(mvtObjectStyled, tileX, tileY, tileZ);
-        }
-        // END MOVE TILE
 
 
         // Convert to data input objects for OpenGL
         List<FDOFloatBasicInput> fdoFloatBasicInputs = new ArrayList<>();
         for(MvtObjectStyled mvtObjectStyled : mvtObjectStyledList) {
-            MvtObject mvtObject = mvtObjectStyled.getMvtObject();
-            if(mvtObject instanceof MvtPolygons) {
-                MvtPolygons polygon = (MvtPolygons) mvtObject;
-                fdoFloatBasicInputs.add(new FDOFloatBasicInput(
-                        polygon.getVertices(),
-                        polygon.getDrawOrder(),
-                        polygon.getCoordinatesPerVertex(),
-                        polygon.getSizeOfOneCoordinate(),
-                        (short)0,
-                        mvtObjectStyled.getParameters().getColor(),
-                        mvtObjectStyled.getParameters().getLineWidth()
-                ));
-            } else if(mvtObject instanceof MvtLines) {
-                MvtLines lines = (MvtLines) mvtObject;
-                fdoFloatBasicInputs.add(new FDOFloatBasicInput(
-                        lines.getVertices(),
-                        lines.getDrawOrder(),
-                        lines.getCoordinatesPerVertex(),
-                        lines.getSizeOfOneCoordinate(),
-                        (short)1,
-                        mvtObjectStyled.getParameters().getColor(),
-                        mvtObjectStyled.getParameters().getLineWidth()
-                ));
-            }
+            fdoFloatBasicInputs.add(new FDOFloatBasicInput(
+                    mvtObjectStyled.getVertices(),
+                    mvtObjectStyled.getDrawOrder(),
+                    mvtObjectStyled.getCoordinatesPerVertex(),
+                    mvtObjectStyled.getSizeOfOneCoordinate(),
+                    FDOFloatBasicInput.getModeFromMvtShape(mvtObjectStyled.getShape()),
+                    mvtObjectStyled.getParameters().getColor(),
+                    mvtObjectStyled.getParameters().getLineWidth()
+            ));
         }
         // END Convert to data input objects for OpenGL
 

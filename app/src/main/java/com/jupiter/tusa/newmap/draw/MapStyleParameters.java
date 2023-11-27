@@ -15,6 +15,11 @@ public class MapStyleParameters {
         this.color = color;
     }
 
+    public void setZ(float z) {this.z = z;}
+
+    public float getZ() {return z;}
+
     private float[] color;
     private float lineWidth;
+    private float z;
 }

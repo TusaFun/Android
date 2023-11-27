@@ -9,12 +9,12 @@ public class TileWorldCoordinates {
         return (float) multiply;
     }
 
-    public void applyToTileMvt(MvtObjectStyled mvtObjectStyled, int x, int y, int z) {
+    public void applyToTileMvt(MvtObject mvtObject, int x, int y, int z) {
         int extentPow = 19 - z;
         int extent = (int) Math.pow(2, extentPow);
         float worldX = x * extent;
         float worldY = - y * extent;
         double multiply = Math.pow(2, extentPow - 12);
-        mvtObjectStyled.getMvtObject().translate(worldX, worldY, multiply);
+        mvtObject.translate(worldX, worldY, multiply);
     }
 }
