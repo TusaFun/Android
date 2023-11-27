@@ -1,12 +1,12 @@
 package com.jupiter.tusa.newmap.mvt;
 
 import android.content.Context;
-import android.util.Printer;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Value;
 import com.jupiter.tusa.newmap.earcut.EarCutDeer;
 import com.jupiter.tusa.utils.ArrayUtils;
+
+import org.checkerframework.checker.units.qual.A;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,7 +17,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import earcut4j.Earcut;
 import vector_tile.VectorTile;
 
 public class MvtUtils {
@@ -57,10 +56,12 @@ public class MvtUtils {
         return newArray;
     }
 
-    public static List<MvtPolygon> readPolygons(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
+    public static MvtPolygons readPolygons(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
         int dimension = 2;
-        List<MvtPolygon> mvtPolygons = new ArrayList<>();
         MvtGeometryRead mvtGeometryRead = MvtUtils.readFeatureGeometry(feature);
+
+        List<Float> resultVertices = new ArrayList<>();
+        List<Integer> resultDrawOrder = new ArrayList<>();
 
         for(int i = 0; i < mvtGeometryRead.vertices.size(); ) {
             Vertices vertices = mvtGeometryRead.vertices.get(i);
@@ -89,31 +90,42 @@ public class MvtUtils {
                 holesInt = null;
             }
             List<Integer> triangles = EarCutDeer.earcut(points, holesInt, dimension);
-            float[] verticesArray = ArrayUtils.ToArray(verticesWithHoleVertices);
-            mvtPolygons.add(new MvtPolygon(
-                            verticesArray,
-                            ArrayUtils.ToArrayInt(triangles),
-                            layer.getName(),
-                            readTags(layer, feature)
-                    )
-            );
+
+            int startFromDrawOrder = (int) (resultVertices.size() / dimension);
+            for(int m = 0; m < triangles.size(); m++) {
+                resultDrawOrder.add(triangles.get(m) + startFromDrawOrder);
+            }
+            resultVertices.addAll(verticesWithHoleVertices);
         }
-        return mvtPolygons;
+        return new MvtPolygons(
+                ArrayUtils.ToArray(resultVertices),
+                ArrayUtils.ToArrayInt(resultDrawOrder),
+                layer.getName(),
+                readTags(layer, feature)
+        );
     }
 
-    public static List<MvtLines> readLines(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
-        List<MvtLines> linesInputs = new ArrayList<>();
+    public static MvtLines readLines(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
         MvtGeometryRead mvtGeometryRead = readFeatureGeometry(feature);
+        int dimension = 2;
+        List<Float> resultPoints = new ArrayList<>();
+        List<Integer> resultDrawOrder = new ArrayList<>();
         for(Vertices vertices : mvtGeometryRead.vertices) {
-            float[] pointsFloat = ArrayUtils.ToArray(vertices.vertices);
+            int startFromDrawOrder = resultPoints.size() / dimension;
+            int maxIndexBorder = vertices.vertices.size() / dimension - 1;
+            for(int i = 0; i < maxIndexBorder; i++) {
+                resultDrawOrder.add(i + startFromDrawOrder);
+                resultDrawOrder.add(i + startFromDrawOrder + 1);
+            }
 
-            linesInputs.add(new MvtLines(
-                    pointsFloat,
-                    layer.getName(),
-                    readTags(layer, feature)
-            ));
+            resultPoints.addAll(vertices.vertices);
         }
-        return linesInputs;
+        return new MvtLines(
+                ArrayUtils.ToArray(resultPoints),
+                ArrayUtils.ToArrayInt(resultDrawOrder),
+                layer.getName(),
+                readTags(layer, feature)
+        );
     }
 
     public static MvtGeometryRead readFeatureGeometry(VectorTile.Tile.Feature feature) {

@@ -2,7 +2,6 @@ package com.jupiter.tusa.newmap.draw;
 
 import android.util.Log;
 
-import com.google.android.gms.maps.model.Polygon;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.jupiter.tusa.cache.template.CacheBytes;
 import com.jupiter.tusa.newmap.MapSurfaceView;
@@ -12,7 +11,7 @@ import com.jupiter.tusa.newmap.load.tiles.MvtApiResource;
 import com.jupiter.tusa.newmap.mvt.MvtLines;
 import com.jupiter.tusa.newmap.mvt.MvtObject;
 import com.jupiter.tusa.newmap.mvt.MvtObjectStyled;
-import com.jupiter.tusa.newmap.mvt.MvtPolygon;
+import com.jupiter.tusa.newmap.mvt.MvtPolygons;
 import com.jupiter.tusa.newmap.mvt.MvtUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -22,7 +21,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import vector_tile.VectorTile;
 
@@ -98,11 +96,11 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
             List<MvtObject> mvtLayerObjects = new ArrayList<>();
             for(VectorTile.Tile.Feature feature : layer.getFeaturesList()) {
                 if(feature.getType() == VectorTile.Tile.GeomType.POLYGON) {
-                    List<MvtPolygon> polygons = MvtUtils.readPolygons(feature, layer);
-                    mvtLayerObjects.addAll(polygons);
+                    MvtPolygons polygons = MvtUtils.readPolygons(feature, layer);
+                    mvtLayerObjects.add(polygons);
                 } else if(feature.getType() == VectorTile.Tile.GeomType.LINESTRING) {
-                    List<MvtLines> lines = MvtUtils.readLines(feature, layer);
-                    mvtLayerObjects.addAll(lines);
+                    MvtLines lines = MvtUtils.readLines(feature, layer);
+                    mvtLayerObjects.add(lines);
                 }
             }
             mvtObjectsMap.put(layer.getName(), mvtLayerObjects);
@@ -139,11 +137,11 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
         List<FDOFloatBasicInput> fdoFloatBasicInputs = new ArrayList<>();
         for(MvtObjectStyled mvtObjectStyled : mvtObjectStyledList) {
             MvtObject mvtObject = mvtObjectStyled.getMvtObject();
-            if(mvtObject instanceof MvtPolygon) {
-                MvtPolygon polygon = (MvtPolygon) mvtObject;
+            if(mvtObject instanceof MvtPolygons) {
+                MvtPolygons polygon = (MvtPolygons) mvtObject;
                 fdoFloatBasicInputs.add(new FDOFloatBasicInput(
                         polygon.getVertices(),
-                        polygon.triangles,
+                        polygon.getDrawOrder(),
                         polygon.getCoordinatesPerVertex(),
                         polygon.getSizeOfOneCoordinate(),
                         (short)0,
@@ -154,7 +152,7 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
                 MvtLines lines = (MvtLines) mvtObject;
                 fdoFloatBasicInputs.add(new FDOFloatBasicInput(
                         lines.getVertices(),
-                        new int[] {},
+                        lines.getDrawOrder(),
                         lines.getCoordinatesPerVertex(),
                         lines.getSizeOfOneCoordinate(),
                         (short)1,

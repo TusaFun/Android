@@ -1,15 +1,11 @@
 package com.jupiter.tusa.newmap.mvt;
 
-import android.util.Log;
-
-import com.jupiter.tusa.utils.ArrayUtils;
-
 import java.util.Map;
-
 import vector_tile.VectorTile;
 
 public class MvtObject {
     protected float[] vertices;
+    protected int[] drawOrder;
     protected String layerName;
     protected Map<String, VectorTile.Tile.Value> tags;
     private int coordinatesPerVertex = 2;
@@ -19,12 +15,14 @@ public class MvtObject {
     public int getCoordinatesPerVertex() {return coordinatesPerVertex;}
     public String getLayerName() {return layerName;}
     public float[] getVertices() {return vertices;}
+    public int[] getDrawOrder() {return drawOrder;}
     public Map<String, VectorTile.Tile.Value> getTags() {return tags;}
 
-    public MvtObject(float[] vertices, String layerName, Map<String, VectorTile.Tile.Value> tags) {
+    public MvtObject(float[] vertices, int[] drawOrder, String layerName, Map<String, VectorTile.Tile.Value> tags) {
         this.vertices = vertices;
         this.layerName = layerName;
         this.tags = tags;
+        this.drawOrder = drawOrder;
     }
 
     public void translate(float dx, float dy, double multiply) {
@@ -33,21 +31,5 @@ public class MvtObject {
             vertices[index] = (float) (vertices[index] * multiply + dx);
             vertices[index + 1] = (float) (vertices[index + 1] * multiply + dy);
         }
-    }
-
-    public void insertZCoordinate(float z) {
-        if(coordinatesPerVertex == 3) {
-            Log.e("GL_ARTEM", "Координата z уже была вставлена.");
-            return;
-        }
-        coordinatesPerVertex = 3;
-        float[] newVertices = new float[vertices.length / 2 + vertices.length];
-        for(int i = 0; i < newVertices.length; i+= 3) {
-            int indexFor2d = i / 3 * 2;
-            newVertices[i] = vertices[indexFor2d];
-            newVertices[i + 1] = vertices[indexFor2d + 1];
-            newVertices[i + 2] = z;
-        }
-        vertices = newVertices;
     }
 }

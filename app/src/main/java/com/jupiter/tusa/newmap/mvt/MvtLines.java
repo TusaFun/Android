@@ -7,9 +7,10 @@ import vector_tile.VectorTile;
 public class MvtLines extends MvtObject {
     public MvtLines(
             float[] vertices,
+            int[] drawOrder,
             String layerName,
             Map<String, VectorTile.Tile.Value> tags
     ) {
-        super(vertices, layerName, tags);
+        super(vertices, drawOrder, layerName, tags);
     }
 }

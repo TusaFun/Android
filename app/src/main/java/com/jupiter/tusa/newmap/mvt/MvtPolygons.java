@@ -4,16 +4,13 @@ import java.util.Map;
 
 import vector_tile.VectorTile;
 
-public class MvtPolygon extends MvtObject{
-    public int[] triangles;
-
-    public MvtPolygon(
+public class MvtPolygons extends MvtObject{
+    public MvtPolygons(
             float[] vertices,
             int[] triangles,
             String layerName,
             Map<String, VectorTile.Tile.Value> tags
     ) {
-        super(vertices, layerName, tags);
-        this.triangles = triangles;
+        super(vertices, triangles, layerName, tags);
     }
 }

@@ -3,7 +3,6 @@ package com.jupiter.tusa.newmap;
 import com.jupiter.tusa.R;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
-
 import com.jupiter.tusa.MainActivity;
 import com.jupiter.tusa.newmap.gl.DrawFrame;
 import com.jupiter.tusa.newmap.gl.ShadersBuilderAndStorage;
@@ -13,7 +12,7 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 public class MapRenderer implements GLSurfaceView.Renderer {
-    private MapWorldCamera mapWorldCamera;
+    private final MapWorldCamera mapWorldCamera;
     private final MainActivity mainActivity;
     private final RunnableHandler<MapRenderer> glSurfaceCreatedHandler;
     private final RunnableHandler<MapRenderer> glSurfaceChangedHandler;
