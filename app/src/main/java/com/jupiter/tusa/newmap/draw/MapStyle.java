@@ -15,22 +15,23 @@ import vector_tile.VectorTile;
 public class MapStyle {
     public List<String> showLayers = new ArrayList<String>()
     {{
-        add("natural_label");
+
+//        add("natural_label");
         add("landcover");
-        add("hillshade");
-        add("water");
-        add("landuse");
-        add("road");
-        add("landuse_overlay");
-        add("waterway");
-        add("aeroway");
-        add("transit_stop_label");
-        add("poi_label");
-        add("place_label");
-        add("motorway_junction");
-        add("building");
-        add("housenum_label");
-        add("structure");
+//        add("hillshade");
+//        add("water");
+//        add("landuse");
+//        add("road");
+//        add("landuse_overlay");
+//        add("waterway");
+//        add("aeroway");
+//        add("transit_stop_label");
+//        add("poi_label");
+//        add("place_label");
+//        add("motorway_junction");
+//        add("building");
+//        add("housenum_label");
+//        add("structure");
         add("admin");
     }};
 
@@ -45,7 +46,7 @@ public class MapStyle {
             boolean disputed = Objects.requireNonNull(tags.get("disputed")).getBoolValue();
             String iso = Objects.requireNonNull(tags.get("iso_3166_1")).getStringValue();
             boolean insideCountry = !iso.contains("-");
-            float adminWidth = 2f;
+            float adminWidth = 5f;
             if(insideCountry) {
                 mapStyleParameters.setLineWidth(adminWidth / 2);
                 mapStyleParameters.setColor(ColorUtils.hslaToRgba(250, 90, 85, 1f));

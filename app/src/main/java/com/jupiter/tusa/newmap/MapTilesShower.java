@@ -28,9 +28,10 @@ public class MapTilesShower {
 
     public void nextMapState(MapTilesShowerMapState state) {
         if(showTestTile) {
-            patchTilesReadyCount = new CountDownLatch(1);
+            patchTilesReadyCount = new CountDownLatch(2);
             executorWaitPatch.execute(new AllTilesLoadPipelinesReadyRunnable(patchTilesReadyCount, mapSurfaceView));
-            nextTile(2, 1, 0);
+            nextTile(2, 1, 1);
+            nextTile(2, 0, 1);
             return;
         }
         MapWorldCamera camera = state.getMapWorldCamera();
