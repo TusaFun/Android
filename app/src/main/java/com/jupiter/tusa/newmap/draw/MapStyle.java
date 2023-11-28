@@ -175,7 +175,7 @@ public class MapStyle {
         }
 
         if(Objects.equals(name, "admin")) {
-            mapStyleParameters.setZ(0.07f);
+            mapStyleParameters.setZ(0.99f);
             boolean disputed = Objects.requireNonNull(tags.get("disputed")).getBoolValue();
             String iso = Objects.requireNonNull(tags.get("iso_3166_1")).getStringValue();
             boolean insideCountry = !iso.contains("-");
@@ -196,7 +196,7 @@ public class MapStyle {
         }
 
         Log.d("GL_ARTEM", "No style for " + name);
-        mapStyleParameters.setColor(new float[] {1f, 0, 0, 1f});
+        mapStyleParameters.setColor(new float[] {1f, 0, 0, 0f});
         return mapStyleParameters;
     }
 }

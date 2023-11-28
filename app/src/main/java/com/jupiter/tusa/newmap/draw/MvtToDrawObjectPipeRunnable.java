@@ -125,7 +125,6 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
         // END STYLE MAP
 
 
-
         // Convert to data input objects for OpenGL
         List<FDOFloatBasicInput> fdoFloatBasicInputs = new ArrayList<>();
         for(MvtObjectStyled mvtObjectStyled : mvtObjectStyledList) {
