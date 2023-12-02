@@ -1,14 +1,13 @@
 package com.jupiter.tusa.newmap.load.tiles;
 
-import com.jupiter.tusa.newmap.thread.result.handlers.RunnableHandler;
-
+import com.jupiter.tusa.newmap.event.MapSignatureEvent;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class LoadTileRunnable implements Runnable {
-    public LoadTileRunnable(MvtApiResource mvtApiResource, RunnableHandler<LoadTileRunnable>[] handlers) {
+    public LoadTileRunnable(MvtApiResource mvtApiResource, MapSignatureEvent<LoadTileRunnable>[] handlers) {
         this.mvtApiResource = mvtApiResource;
         this.handlers = handlers;
     }
@@ -25,7 +24,7 @@ public class LoadTileRunnable implements Runnable {
         return bytes;
     }
 
-    private RunnableHandler<LoadTileRunnable>[] handlers;
+    private MapSignatureEvent<LoadTileRunnable>[] handlers;
     private MvtApiResource mvtApiResource;
     private byte[] bytes;
 
@@ -46,7 +45,7 @@ public class LoadTileRunnable implements Runnable {
             outputStream.flush();
             bytes = outputStream.toByteArray();
             if(responseCode == 200) {
-                for(RunnableHandler<LoadTileRunnable> handler : handlers) {
+                for(MapSignatureEvent<LoadTileRunnable> handler : handlers) {
                     handler.handle(this);
                 }
             }

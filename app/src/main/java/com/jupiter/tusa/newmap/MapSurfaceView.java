@@ -10,9 +10,13 @@ import android.view.ScaleGestureDetector;
 import androidx.annotation.NonNull;
 import com.jupiter.tusa.MainActivity;
 import com.jupiter.tusa.cache.CacheStorage;
+import com.jupiter.tusa.newmap.camera.MapWorldCamera;
+import com.jupiter.tusa.newmap.chunk.ChunksWindow;
 import com.jupiter.tusa.newmap.draw.MapStyle;
-import com.jupiter.tusa.newmap.thread.result.handlers.GlSurfaceChangedHandler;
-import com.jupiter.tusa.newmap.thread.result.handlers.GlSurfaceCreatedHandler;
+import com.jupiter.tusa.newmap.event.GlSurfaceChangedEvent;
+import com.jupiter.tusa.newmap.event.GlSurfaceCreatedEvent;
+
+import org.checkerframework.checker.units.qual.C;
 
 public class MapSurfaceView extends GLSurfaceView {
     public MapSurfaceView(Context context) {
@@ -34,11 +38,12 @@ public class MapSurfaceView extends GLSurfaceView {
     private float previousScreenX;
     private float previousScreenY;
     private final MapStyle mapStyle = new MapStyle();
+    private TileWorldCoordinates tileWorldCoordinates;
 
     private int maxTileZoom = 19;
-    private int currentTileZ;
 
-    public int getCurrentTileZ() {return currentTileZ; }
+    public TileWorldCoordinates getTileWorldCoordinates() {return tileWorldCoordinates; }
+    public MainActivity getMainActivity() {return mainActivity;}
     public CacheStorage getCacheStorage() { return mainActivity.getCacheStorage(); }
     public MapRenderer getMapRenderer() {
         return mapRenderer;
@@ -52,10 +57,15 @@ public class MapSurfaceView extends GLSurfaceView {
         super(context, attrs);
         mainActivity = (MainActivity) context;
         distanceToTileZ = new DistanceToTileZ(maxTileZoom);
+        tileWorldCoordinates = new TileWorldCoordinates();
+
+        ChunksWindow chunksWindow = new ChunksWindow(3,3);
+        chunksWindow.shiftWindow(0, 0, 0);
 
         float initScaleFactor = distanceToTileZ.calcDistanceForZ(1);
         mapScaleListener = new MapScaleListener(initScaleFactor);
-        currentTileZ = distanceToTileZ.calcCurrentTileZ(initScaleFactor);
+        int mapZ = distanceToTileZ.calcCurrentTileZ(initScaleFactor);
+        tileWorldCoordinates.updateMapZ(mapZ);
 
         mScaleDetector = new ScaleGestureDetector(context, mapScaleListener);
         gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
@@ -64,16 +74,14 @@ public class MapSurfaceView extends GLSurfaceView {
                 return true;
             }
         });
-        mapTilesShower = new MapTilesShower(
-                this
-        );
+        mapTilesShower = new MapTilesShower(this);
 
         setEGLContextClientVersion(2);
         mapRenderer = new MapRenderer(
-                mainActivity,
+                this,
                 initScaleFactor,
-                new GlSurfaceCreatedHandler(this),
-                new GlSurfaceChangedHandler(this)
+                new GlSurfaceCreatedEvent(this),
+                new GlSurfaceChangedEvent(this)
         );
         setRenderer(mapRenderer);
 
@@ -92,17 +100,18 @@ public class MapSurfaceView extends GLSurfaceView {
 
         if(event.getPointerCount() == 2) {
             float scaleFactorNormalized = mapScaleListener.getNormalizedScaleFactor();
-            Log.d("GL_ARTEM", "Normalized scale factor = " + scaleFactorNormalized);
+            //Log.d("GL_ARTEM", "Normalized scale factor = " + scaleFactorNormalized);
             if(action == MotionEvent.ACTION_MOVE) {
                 // Маштабирование карты
                 mapWorldCamera.moveZ(scaleFactorNormalized);
-            } else if(action == 6 || action == 262) {
                 int newTileZ = distanceToTileZ.calcCurrentTileZ(scaleFactorNormalized);
-                if(newTileZ != currentTileZ) {
-                    currentTileZ = newTileZ;
-                    sendCurrentMapStateToShower();
-                    Log.d("GL_ARTEM", "next tile z = " + currentTileZ);
+                if(newTileZ != tileWorldCoordinates.getCurrentZ()) {
+                    tileWorldCoordinates.updateMapZ(newTileZ);
+                    mapTilesShower.nextMapState();
+                    Log.d("GL_ARTEM", "next tile z = " + tileWorldCoordinates.getCurrentZ());
                 }
+            } else if(action == 6 || action == 262) {
+
             }
             //Log.d("GL_ARTEM", "event = " + event.getAction());
         } else if(event.getAction() == MotionEvent.ACTION_MOVE){
@@ -113,7 +122,13 @@ public class MapSurfaceView extends GLSurfaceView {
                 currentMapX += dx * glWorldWidth * moveSpeed;
                 currentMapY -= dy * glWorldWidth * moveSpeed;
                 mapWorldCamera.moveXY(currentMapX, currentMapY);
+                boolean changed = tileWorldCoordinates.updateCurrentTileXY(currentMapX, currentMapY);
+                if(changed) {
+                    //mapTilesShower.nextMapState();
+                }
+
                 float[] coordinates = mapWorldCamera.getBottomRightWorldViewCoordinates();
+
                 //Log.d("GL_ARTEM", "0, 0 screen world loc: " + Arrays.toString(coordinates));
             }
         }
@@ -122,11 +137,5 @@ public class MapSurfaceView extends GLSurfaceView {
         previousScreenY = screenY;
         requestRender();
         return true;
-    }
-
-    public void sendCurrentMapStateToShower() {
-        mapTilesShower.nextMapState(new MapTilesShowerMapState(
-                currentTileZ, getMapRenderer().getMapWorldCamera()
-        ));
     }
 }

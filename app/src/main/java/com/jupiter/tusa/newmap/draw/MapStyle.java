@@ -15,23 +15,22 @@ import vector_tile.VectorTile;
 public class MapStyle {
     public List<String> showLayers = new ArrayList<String>()
     {{
-
-        //add("natural_label");
+        add("natural_label");
         add("landcover");
-        //add("hillshade");
+        add("hillshade");
         add("water");
-        //add("landuse");
-//        add("road");
-//        add("landuse_overlay");
-//        add("waterway");
-//        add("aeroway");
-//        add("transit_stop_label");
-//        add("poi_label");
-//        add("place_label");
-//        add("motorway_junction");
-//        add("building");
-//        add("housenum_label");
-//        add("structure");
+        add("landuse");
+        add("road");
+        add("landuse_overlay");
+        add("waterway");
+        add("aeroway");
+        add("transit_stop_label");
+        add("poi_label");
+        add("place_label");
+        add("motorway_junction");
+        add("building");
+        add("housenum_label");
+        add("structure");
         add("admin");
     }};
 
@@ -58,7 +57,7 @@ public class MapStyle {
         }
 
         if(Objects.equals(name, "water")) {
-            mapStyleParameters.setZ(0.01f);
+            mapStyleParameters.setZ(0f);
             mapStyleParameters.setColor(ColorUtils.hslaToRgba(197, 98, 78, 1));
             return mapStyleParameters;
         }
@@ -84,7 +83,7 @@ public class MapStyle {
         }
 
         if(Objects.equals(name, "waterway")) {
-            mapStyleParameters.setZ(0.04f);
+            mapStyleParameters.setZ(0.95f);
             mapStyleParameters.setColor(ColorUtils.hslaToRgba(197, 98, 78, 1));
             return mapStyleParameters;
         }
@@ -174,7 +173,81 @@ public class MapStyle {
             return mapStyleParameters;
         }
 
+        if(Objects.equals(name, "road")) {
+            mapStyleParameters.setZ(0.9f);
+            if(tags.containsKey("class")) {
+                String classValue = Objects.requireNonNull(tags.get("class")).getStringValue();
+                if(classValue.equals("motorway")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("motorway_link")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("trunk_link")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("track")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("primary")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(230, 10, 92, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("primary_link")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(230, 10, 92, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("service")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("trunk")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("secondary")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(230, 10, 92, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("tertiary")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("street")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("street_limited")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("pedestrian")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("ferry")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                if(classValue.equals("major_rail")) {
+                    mapStyleParameters.setColor(ColorUtils.hslaToRgba(45, 98, 80, 1f));
+                    return mapStyleParameters;
+                }
+                Log.w("GL_ARTEM", "road skipped class " + classValue);
+            }
+            mapStyleParameters.setColor(ColorUtils.hslaToRgba(230, 10, 92, 1f));
+            return mapStyleParameters;
+        }
+
         if(Objects.equals(name, "admin")) {
+            if(zoom > 12) {
+                mapStyleParameters.setColor(new float[] {0f,0f,0f,0f});
+                return mapStyleParameters;
+            }
             mapStyleParameters.setZ(0.99f);
             boolean disputed = Objects.requireNonNull(tags.get("disputed")).getBoolValue();
             String iso = Objects.requireNonNull(tags.get("iso_3166_1")).getStringValue();
@@ -195,7 +268,7 @@ public class MapStyle {
             return mapStyleParameters;
         }
 
-        Log.d("GL_ARTEM", "No style for " + name);
+        //Log.d("GL_ARTEM", "No style for " + name);
         mapStyleParameters.setColor(new float[] {1f, 0, 0, 0f});
         return mapStyleParameters;
     }

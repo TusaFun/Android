@@ -10,15 +10,17 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
 public class FDOFloatBasicInput {
-    private int vertexStride;
-    private int coordinatesPerVertex;
-    private int drawOrderLength;
-    private FloatBuffer vertexBuffer;
-    private IntBuffer drawListBuffer;
-    private float[] color;
-    private int drawMode;
-    private float lineWidth;
+    private final int key;
+    private final int vertexStride;
+    private final int coordinatesPerVertex;
+    private final int drawOrderLength;
+    private final FloatBuffer vertexBuffer;
+    private final IntBuffer drawListBuffer;
+    private final float[] color;
+    private final int drawMode;
+    private final float lineWidth;
 
+    public int getKey() { return key; }
     public float getLineWidth() {return lineWidth;}
     public int getDrawMode() {return drawMode;}
     public int getDrawOrderLength() {return drawOrderLength;}
@@ -29,6 +31,7 @@ public class FDOFloatBasicInput {
     public float[] getColor() {return color;}
 
     public FDOFloatBasicInput(
+            int key,
             float[] vertexCoordinates,
             int[] drawOrder,
             int coordinatesPerVertex,
@@ -37,6 +40,7 @@ public class FDOFloatBasicInput {
             float[] color,
             float lineWidth
     ) {
+        this.key = key;
         this.lineWidth = lineWidth;
         this.drawMode = drawMode;
         this.color = color;

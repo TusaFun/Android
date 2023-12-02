@@ -1,12 +1,12 @@
-package com.jupiter.tusa.newmap.thread.result.handlers;
+package com.jupiter.tusa.newmap.event;
 
 import com.jupiter.tusa.cache.CacheStorage;
 import com.jupiter.tusa.cache.template.CacheBytes;
 import com.jupiter.tusa.newmap.load.tiles.LoadTileRunnable;
 
-public class SaveMvtToCacheHandler implements RunnableHandler<LoadTileRunnable> {
+public class SaveMvtToCacheEvent implements MapSignatureEvent<LoadTileRunnable> {
     private CacheBytes cacheBytes;
-    public SaveMvtToCacheHandler(CacheStorage cacheStorage) {
+    public SaveMvtToCacheEvent(CacheStorage cacheStorage) {
         this.cacheBytes = new CacheBytes(cacheStorage);
     }
 

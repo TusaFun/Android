@@ -1,6 +1,12 @@
-package com.jupiter.tusa.newmap;
+package com.jupiter.tusa.newmap.camera;
 
 import android.opengl.Matrix;
+
+import androidx.core.math.MathUtils;
+
+import com.jupiter.tusa.newmap.DistanceToTileZ;
+import com.jupiter.tusa.newmap.MapMath;
+import com.jupiter.tusa.newmap.TileWorldCoordinates;
 
 public class MapWorldCamera {
     private float x;
@@ -11,6 +17,7 @@ public class MapWorldCamera {
     private int viewportWidth;
     private float[] upperLeftWorldViewCoordinates;
     private float[] bottomRightWorldViewCoordinates;
+    private TileWorldCoordinates tileWorldCoordinates;
 
     private final float[] modelViewMatrix = new float[16];
     private final float[] projectionMatrix = new float[16];
@@ -30,11 +37,13 @@ public class MapWorldCamera {
     public MapWorldCamera(
             float x,
             float y,
-            float initScaleFactor
+            float initScaleFactor,
+            TileWorldCoordinates tileWorldCoordinates
     ) {
         this.x = x;
         this.y = y;
         this.initScaleFactor = initScaleFactor;
+        this.tileWorldCoordinates = tileWorldCoordinates;
     }
 
     public void moveXY(float x, float y) {
@@ -46,6 +55,27 @@ public class MapWorldCamera {
     public void moveZ(float distancePortion) {
         this.initScaleFactor = distancePortion;
         newPosition();
+    }
+
+    public ViewTitles getViewTiles() {
+        int mapZ = tileWorldCoordinates.getCurrentZ();
+        float extent = tileWorldCoordinates.getCurrentExtent();
+        float startX = upperLeftWorldViewCoordinates[0];
+        float endX = bottomRightWorldViewCoordinates[0];
+        float startY = -1 * upperLeftWorldViewCoordinates[1];
+        float endY = -1 * bottomRightWorldViewCoordinates[1];
+        int borderAmountTiles = (int) Math.pow(2, mapZ);
+        int maxTileNumber = borderAmountTiles - 1;
+
+        int startXTile = (int) (startX / extent);
+        startXTile = MathUtils.clamp(startXTile, 0, maxTileNumber);
+        int endXTile = (int) (endX / extent);
+        endXTile = MathUtils.clamp(endXTile, 0, maxTileNumber);
+        int startYTile = (int) (startY / extent);
+        startYTile = MathUtils.clamp(startYTile, 0, maxTileNumber);
+        int endYTile = (int) (endY / extent);
+        endYTile = MathUtils.clamp(endYTile, 0, maxTileNumber);
+        return new ViewTitles(startXTile, endXTile, startYTile, endYTile, mapZ);
     }
 
     public void updateViewportSize(int width, int height) {

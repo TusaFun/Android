@@ -4,41 +4,44 @@ import com.jupiter.tusa.R;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import com.jupiter.tusa.MainActivity;
-import com.jupiter.tusa.newmap.gl.DrawFrame;
+import com.jupiter.tusa.newmap.camera.MapWorldCamera;
+import com.jupiter.tusa.newmap.gl.DrawOpenGLPrograms;
 import com.jupiter.tusa.newmap.gl.ShadersBuilderAndStorage;
 import com.jupiter.tusa.newmap.draw.DrawOpenGlProgram;
-import com.jupiter.tusa.newmap.thread.result.handlers.RunnableHandler;
+import com.jupiter.tusa.newmap.event.MapSignatureEvent;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 public class MapRenderer implements GLSurfaceView.Renderer {
+    private final MapSurfaceView mapSurfaceView;
     private final MapWorldCamera mapWorldCamera;
-    private final MainActivity mainActivity;
-    private final RunnableHandler<MapRenderer> glSurfaceCreatedHandler;
-    private final RunnableHandler<MapRenderer> glSurfaceChangedHandler;
+    private final MapSignatureEvent<MapRenderer> glSurfaceCreatedHandler;
+    private final MapSignatureEvent<MapRenderer> glSurfaceChangedHandler;
 
-    private final DrawFrame drawFrame;
+    private final DrawOpenGLPrograms drawFrame;
     private final ShadersBuilderAndStorage shadersBuilderAndStorage;
 
-    public DrawFrame getDrawFrame() {return drawFrame;}
+    public DrawOpenGLPrograms getDrawPrograms() {return drawFrame;}
     public MapWorldCamera getMapWorldCamera() {return mapWorldCamera;}
 
     public MapRenderer(
-            MainActivity mainActivity,
+            MapSurfaceView mapSurfaceView,
             float initScaleFactor,
-            RunnableHandler<MapRenderer> glSurfaceCreated,
-            RunnableHandler<MapRenderer> glSurfaceChanged
+            MapSignatureEvent<MapRenderer> glSurfaceCreated,
+            MapSignatureEvent<MapRenderer> glSurfaceChanged
     ) {
-        this.mainActivity = mainActivity;
+        MainActivity mainActivity = mapSurfaceView.getMainActivity();
+        this.mapSurfaceView = mapSurfaceView;
         this.shadersBuilderAndStorage = new ShadersBuilderAndStorage(mainActivity);
         this.glSurfaceCreatedHandler = glSurfaceCreated;
         this.glSurfaceChangedHandler = glSurfaceChanged;
         mapWorldCamera = new MapWorldCamera(
                 0,
                 0,
-                initScaleFactor
+                initScaleFactor,
+                mapSurfaceView.getTileWorldCoordinates()
         );
-        drawFrame =  new DrawFrame(shadersBuilderAndStorage);
+        drawFrame = new DrawOpenGLPrograms(shadersBuilderAndStorage);
     }
 
     @Override
@@ -65,8 +68,9 @@ public class MapRenderer implements GLSurfaceView.Renderer {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
         float[] modelViewMatrix = mapWorldCamera.getModelViewMatrix();
 
-        for (DrawOpenGlProgram drawMePlease : drawFrame.getDrawMePlease()) {
-            drawMePlease.draw(modelViewMatrix);
+        for (DrawOpenGlProgram drawProgram : drawFrame.getDrawPrograms()) {
+            if(drawProgram == null) continue;
+            drawProgram.draw(modelViewMatrix);
         }
     }
 }

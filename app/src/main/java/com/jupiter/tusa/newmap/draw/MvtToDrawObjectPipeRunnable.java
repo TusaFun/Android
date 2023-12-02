@@ -3,13 +3,15 @@ package com.jupiter.tusa.newmap.draw;
 import android.util.Log;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.jupiter.tusa.cache.template.CacheBytes;
-import com.jupiter.tusa.newmap.MapSurfaceView;
 import com.jupiter.tusa.newmap.TileWorldCoordinates;
+import com.jupiter.tusa.newmap.gl.TileDataForPrograms;
 import com.jupiter.tusa.newmap.gl.program.FDOFloatBasicInput;
+import com.jupiter.tusa.newmap.load.tiles.TilesChunkCounter;
 import com.jupiter.tusa.newmap.load.tiles.MvtApiResource;
 import com.jupiter.tusa.newmap.mvt.MvtObject;
 import com.jupiter.tusa.newmap.mvt.MvtObjectStyled;
 import com.jupiter.tusa.newmap.mvt.MvtUtils;
+import com.jupiter.tusa.newmap.event.MapSignatureEvent;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -17,24 +19,26 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import vector_tile.VectorTile;
 
 public class MvtToDrawObjectPipeRunnable implements Runnable {
     private final CacheBytes cacheBytes;
     private final MvtApiResource mvtApiResource;
-    private final MapSurfaceView mapSurfaceView;
-    private final CountDownLatch countDownLatchReady;
+    private final MapSignatureEvent<MvtToDrawPipeOutput> onReady;
+    private final MapStyle mapStyle;
+    private final TilesChunkCounter tilesChunkCounter;
     public MvtToDrawObjectPipeRunnable(
             CacheBytes cacheBytes,
             MvtApiResource mvtApiResource,
-            MapSurfaceView mapSurfaceView,
-            CountDownLatch countDownLatchReady
+            MapStyle mapStyle,
+            TilesChunkCounter loadCounter,
+            MapSignatureEvent<MvtToDrawPipeOutput> onReady
     ) {
         this.cacheBytes = cacheBytes;
         this.mvtApiResource = mvtApiResource;
-        this.mapSurfaceView = mapSurfaceView;
-        this.countDownLatchReady = countDownLatchReady;
+        this.onReady = onReady;
+        this.mapStyle = mapStyle;
+        this.tilesChunkCounter = loadCounter;
     }
 
     @Override
@@ -70,14 +74,12 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
         }
         if(tile == null) {
             Log.w("GL_ARTEM", String.format("Не могу загрузить тайл x%d y%d z%d", tileX, tileY, tileZ));
-            countDownLatchReady.countDown();
             return;
         }
         // END GET TILE
 
 
         // READ MVT VECTOR DATA
-        MapStyle mapStyle = mapSurfaceView.getMapStyle();
         VectorTile.Tile mvtTile = null;
         try {
            mvtTile = MvtUtils.parse(tile);
@@ -129,6 +131,7 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
         List<FDOFloatBasicInput> fdoFloatBasicInputs = new ArrayList<>();
         for(MvtObjectStyled mvtObjectStyled : mvtObjectStyledList) {
             fdoFloatBasicInputs.add(new FDOFloatBasicInput(
+                    tilesChunkCounter.getKey(),
                     mvtObjectStyled.getVertices(),
                     mvtObjectStyled.getDrawOrder(),
                     mvtObjectStyled.getCoordinatesPerVertex(),
@@ -140,7 +143,8 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
         }
         // END Convert to data input objects for OpenGL
 
-        mapSurfaceView.getMapRenderer().getDrawFrame().addRenderProgramsInput(fdoFloatBasicInputs);
-        countDownLatchReady.countDown();
+        tilesChunkCounter.increaseLoaded();
+        TileDataForPrograms tileDataForPrograms = new TileDataForPrograms(fdoFloatBasicInputs);
+        onReady.handle(new MvtToDrawPipeOutput(tilesChunkCounter, tileDataForPrograms));
     }
 }

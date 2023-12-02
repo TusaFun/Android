@@ -1,12 +1,36 @@
 package com.jupiter.tusa.newmap;
 
 import com.jupiter.tusa.newmap.mvt.MvtObject;
-import com.jupiter.tusa.newmap.mvt.MvtObjectStyled;
 
 public class TileWorldCoordinates {
-    public float getTileZExtent(int z) {
-        int multiply = (int) Math.pow(2, 19 - z);
-        return (float) multiply;
+    private int currentZ;
+    private int currentTileX = 0;
+    private int currentTileY = 0;
+    private float currentExtent;
+
+    public int getCurrentZ() {
+        return currentZ;
+    }
+
+    public float getCurrentExtent() {
+        return currentExtent;
+    }
+
+    public void updateMapZ(int z) {
+        currentZ = z;
+        currentExtent = (float) Math.pow(2, 19 - z);
+    }
+
+    public boolean updateCurrentTileXY(float x, float y) {
+        int newX = (int) (x / currentExtent);
+        int newY = (int) (y / currentExtent);
+
+        if(currentTileX != newX || currentTileY != newY) {
+            currentTileX = newX;
+            currentTileY = newY;
+            return true;
+        }
+        return false;
     }
 
     public void applyToTileMvt(MvtObject mvtObject, int x, int y, int z) {
