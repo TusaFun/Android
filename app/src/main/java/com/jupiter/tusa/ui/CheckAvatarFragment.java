@@ -2,7 +2,6 @@ package com.jupiter.tusa.ui;
 
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -20,9 +19,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.jupiter.tusa.MainActivity;
-import com.jupiter.tusa.background.TusaWorker;
 import com.jupiter.tusa.databinding.FragmentCheckAvatarBinding;
-import com.jupiter.tusa.uploadfiles.UploadAvatarImageTask;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
@@ -147,13 +144,13 @@ public class CheckAvatarFragment extends Fragment {
                         }
 
                         // compressing jpeg file
-                        byte[] compressed = mainActivity.compressJpegImage(loadedBytes, useQuality);
+                        //byte[] compressed =
 
-                        SharedPreferences sharedPreferences = mainActivity.getSharedPreferences(TusaWorker.SharedPreferencesName, Context.MODE_PRIVATE);
-                        String accessToken = sharedPreferences.getString(TusaWorker.SharedPreferencesAccessTokenKey, "");
-
-                        UploadAvatarImageTask uploadAvatarImageTask = new UploadAvatarImageTask(compressed,accessToken);
-                        uploadAvatarImageTask.execute();
+//                        SharedPreferences sharedPreferences = mainActivity.getSharedPreferences(TusaWorker.SharedPreferencesName, Context.MODE_PRIVATE);
+//                        String accessToken = sharedPreferences.getString(TusaWorker.SharedPreferencesAccessTokenKey, "");
+//
+//                        UploadAvatarImageTask uploadAvatarImageTask = new UploadAvatarImageTask(compressed,accessToken);
+//                        uploadAvatarImageTask.execute();
                     }
                 });
 

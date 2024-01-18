@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -43,17 +44,17 @@ public class MvtUtils {
         return  ((geometry >> 1) ^ (-(geometry & 1)));
     }
 
-    public static float[] insertZOrderTo2D(float[] vertices, float z) {
-        int pointsAmount = vertices.length / 2;
-        float[] newArray = new float[pointsAmount * 3];
+    public static List<Float> insertZOrderTo2D(List<Float> vertices, float z) {
+        int pointsAmount = vertices.size() / 2;
+        Float[] newArray = new Float[pointsAmount * 3];
         for(int i = 0; i < pointsAmount; i++) {
             int rightIndex = i * 2;
             int leftIndex = i * 3;
-            newArray[leftIndex] = vertices[rightIndex];
-            newArray[leftIndex + 1] = vertices[rightIndex + 1];
+            newArray[leftIndex] = vertices.get(rightIndex);
+            newArray[leftIndex + 1] = vertices.get(rightIndex + 1);
             newArray[leftIndex + 2] = z;
         }
-        return newArray;
+        return new ArrayList(Arrays.asList(newArray));
     }
 
     public static MvtObject readPolygons(VectorTile.Tile.Feature feature, VectorTile.Tile.Layer layer) {
@@ -98,8 +99,8 @@ public class MvtUtils {
             resultVertices.addAll(verticesWithHoleVertices);
         }
         return new MvtObject(
-                ArrayUtils.ToArray(resultVertices),
-                ArrayUtils.ToArrayInt(resultDrawOrder),
+                resultVertices,
+                resultDrawOrder,
                 layer.getName(),
                 readTags(layer, feature),
                 MvtShapes.POLYGON
@@ -122,8 +123,8 @@ public class MvtUtils {
             resultPoints.addAll(vertices.vertices);
         }
         return new MvtObject(
-                ArrayUtils.ToArray(resultPoints),
-                ArrayUtils.ToArrayInt(resultDrawOrder),
+                resultPoints,
+                resultDrawOrder,
                 layer.getName(),
                 readTags(layer, feature),
                 MvtShapes.LINE

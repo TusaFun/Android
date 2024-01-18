@@ -1,6 +1,12 @@
 package com.jupiter.tusa.newmap.load.tiles;
 
+import com.jupiter.tusa.newmap.mvt.MvtObjectStyled;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class TilesChunkCounter {
+    private List<MvtObjectStyled> styledList = new ArrayList<>();
     private int index = 0;
     private final int amount;
     private final int key;
@@ -8,6 +14,10 @@ public class TilesChunkCounter {
 
     public int getKey() {
         return key;
+    }
+
+    public List<MvtObjectStyled> getStyledList() {
+        return styledList;
     }
 
     public boolean getIsReady() {
@@ -23,8 +33,9 @@ public class TilesChunkCounter {
         this.key = key;
     }
 
-    public synchronized void increaseLoaded() {
+    public synchronized void increaseLoaded(List<MvtObjectStyled> styledList) {
         index += 1;
         isReady = index >= amount;
+        this.styledList.addAll(styledList);
     }
 }

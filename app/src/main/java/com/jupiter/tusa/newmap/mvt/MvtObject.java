@@ -1,12 +1,13 @@
 package com.jupiter.tusa.newmap.mvt;
 
+import java.util.List;
 import java.util.Map;
 import vector_tile.VectorTile;
 
 public class MvtObject {
     protected MvtShapes shape;
-    protected float[] vertices;
-    protected int[] drawOrder;
+    protected List<Float> vertices;
+    protected List<Integer> drawOrder;
     protected String layerName;
     protected Map<String, VectorTile.Tile.Value> tags;
     protected int coordinatesPerVertex = 2;
@@ -15,14 +16,14 @@ public class MvtObject {
     public int getSizeOfOneCoordinate() {return sizeOfOneCoordinate;}
     public int getCoordinatesPerVertex() {return coordinatesPerVertex;}
     public String getLayerName() {return layerName;}
-    public float[] getVertices() {return vertices;}
-    public int[] getDrawOrder() {return drawOrder;}
+    public List<Float> getVertices() {return vertices;}
+    public List<Integer> getDrawOrder() {return drawOrder;}
     public MvtShapes getShape() {return shape;}
     public Map<String, VectorTile.Tile.Value> getTags() {return tags;}
 
     public MvtObject(
-            float[] vertices,
-            int[] drawOrder,
+            List<Float> vertices,
+            List<Integer> drawOrder,
             String layerName,
             Map<String, VectorTile.Tile.Value> tags,
             MvtShapes shape
@@ -35,10 +36,10 @@ public class MvtObject {
     }
 
     public void translate(float dx, float dy, double multiply) {
-        for (int i = 0; i < vertices.length / coordinatesPerVertex; i++) {
+        for (int i = 0; i < vertices.size() / coordinatesPerVertex; i++) {
             int index = i * coordinatesPerVertex;
-            vertices[index] = (float) (vertices[index] * multiply + dx);
-            vertices[index + 1] = (float) (vertices[index + 1] * multiply + dy);
+            vertices.set(index, (float) (vertices.get(index) * multiply + dx));
+            vertices.set(index + 1, (float) (vertices.get(index + 1) * multiply + dy));
         }
     }
 }

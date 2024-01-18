@@ -1,237 +1,247 @@
 
-#define REAL float
-
 #include <jni.h>
 #include <string>
 #include <iostream>
 #include <cstdio>
 #include <csetjmp>
-#include "tusa-jpeg.h"
-#include "triangle.h"
 #include <vector>
+#include <math.h>
+#include <sstream>
+#include <iosfwd>
+
 #include <android/log.h>
 #include <cstdlib>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+#include <android/asset_manager.h>
+#include <android/asset_manager_jni.h>
+#include "util/matrices.h"
+#include "util/frustrums.h"
+#include "shader/shaders_bucket.h"
+#include "map/map.h"
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_jupiter_tusa_MainActivity_stringFromJNI(
+#define LOG_TAG "GL_ARTEM"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+
+GLuint simpleTriangleProgram;
+GLuint vPosition;
+GLuint vertexLocation;
+GLuint vertexColorLocation;
+GLuint projectionLocation;
+GLuint modelViewLocation;
+Matrix4 projectionMatrix;
+Matrix4 modelViewMatrix;
+float angle = 0;
+Map map = Map();
+
+
+GLuint loadShader(GLenum shaderType, const char* shaderSource) {
+    GLuint shader = glCreateShader(shaderType);
+    if(shader) {
+        glShaderSource(shader, 1, &shaderSource, NULL);
+        glCompileShader(shader);
+        GLint compiled = 0;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+        if(!compiled) {
+            GLint infoLen = 0;
+            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLen);
+            if(infoLen) {
+                char* buf = (char*) malloc(infoLen);
+                if(buf) {
+                    glGetShaderInfoLog(shader, infoLen, NULL, buf);
+                    LOGE("Could not compile shader %d:\n%s\n", shaderType, buf);
+                    free(buf);
+                }
+                glDeleteShader(shader);
+                shader = 0;
+            }
+        }
+    }
+    return shader;
+}
+
+GLuint createProgram(const char* vertexSource, const char* fragmentSource) {
+    GLuint vertexShader = loadShader(GL_VERTEX_SHADER, vertexSource);
+    if(!vertexShader) {
+        return 0;
+    }
+    GLuint fragmentShader = loadShader(GL_FRAGMENT_SHADER, fragmentSource);
+    if(!fragmentShader) {
+        return 0;
+    }
+    GLuint program = glCreateProgram();
+    if(program) {
+        glAttachShader(program, vertexShader);
+        glAttachShader(program, fragmentShader);
+        glLinkProgram(program);
+        GLint linkStatus = GL_FALSE;
+        glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+        if(linkStatus != GL_TRUE) {
+            GLint bufLength = 0;
+            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &bufLength);
+            if(bufLength) {
+                char* buf = (char *) malloc(bufLength);
+                if(buf) {
+                    glGetProgramInfoLog(program, bufLength, NULL, buf);
+                    LOGE("Could not link program:\n%s\n", buf);
+                    free(buf);
+                }
+            }
+            glDeleteProgram(program);
+            program = 0;
+        }
+    }
+    return program;
+}
+
+static const char  glVertexShader[] =
+        "attribute vec4 vertexPosition;\n"
+        "attribute vec3 vertexColour;\n"
+        "varying vec3 fragColour;\n"
+        "uniform mat4 projection;\n"
+        "uniform mat4 modelView;\n"
+        "void main()\n"
+        "{\n"
+        "    gl_Position = projection * modelView * vertexPosition;\n"
+        "    fragColour = vertexColour;\n"
+        "}\n";
+
+static const char glFragmentShader[] =
+        "precision mediump float;\n"
+        "varying vec3 fragColour;\n"
+        "void main()\n"
+        "{\n"
+        "    gl_FragColor = vec4(fragColour, 1.0);\n"
+        "}\n";
+
+const GLfloat triangleVertices[] = {
+        0.0f, 1.0f,
+        -1.0f, -1.0f,
+        1.0f, -1.0f
+};
+
+GLfloat colour[] = {1.0f, 0.0f, 0.0f,
+                    1.0f, 0.0f, 0.0f,
+                    1.0f, 0.0f, 0.0f,
+                    1.0f, 0.0f, 0.0f,
+                    0.0f, 1.0f, 0.0f,
+                    0.0f, 1.0f, 0.0f,
+                    0.0f, 1.0f, 0.0f,
+                    0.0f, 1.0f, 0.0f,
+                    0.0f, 0.0f, 1.0f,
+                    0.0f, 0.0f, 1.0f,
+                    0.0f, 0.0f, 1.0f,
+                    0.0f, 0.0f, 1.0f,
+                    1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 0.0f,
+                    1.0f, 1.0f, 0.0f,
+                    0.0f, 1.0f, 1.0f,
+                    0.0f, 1.0f, 1.0f,
+                    0.0f, 1.0f, 1.0f,
+                    0.0f, 1.0f, 1.0f,
+                    1.0f, 0.0f, 1.0f,
+                    1.0f, 0.0f, 1.0f,
+                    1.0f, 0.0f, 1.0f,
+                    1.0f, 0.0f, 1.0f
+};
+
+const GLfloat cubeVertices[] = {-1.0f,  1.0f, -1.0f, /* Back. */
+                          1.0f,  1.0f, -1.0f,
+                          -1.0f, -1.0f, -1.0f,
+                          1.0f, -1.0f, -1.0f,
+                          -1.0f,  1.0f,  1.0f, /* Front. */
+                          1.0f,  1.0f,  1.0f,
+                          -1.0f, -1.0f,  1.0f,
+                          1.0f, -1.0f,  1.0f,
+                          -1.0f,  1.0f, -1.0f, /* Left. */
+                          -1.0f, -1.0f, -1.0f,
+                          -1.0f, -1.0f,  1.0f,
+                          -1.0f,  1.0f,  1.0f,
+                          1.0f,  1.0f, -1.0f, /* Right. */
+                          1.0f, -1.0f, -1.0f,
+                          1.0f, -1.0f,  1.0f,
+                          1.0f,  1.0f,  1.0f,
+                          -1.0f, -1.0f, -1.0f, /* Top. */
+                          -1.0f, -1.0f,  1.0f,
+                          1.0f, -1.0f,  1.0f,
+                          1.0f, -1.0f, -1.0f,
+                          -1.0f,  1.0f, -1.0f, /* Bottom. */
+                          -1.0f,  1.0f,  1.0f,
+                          1.0f,  1.0f,  1.0f,
+                          1.0f,  1.0f, -1.0f
+};
+
+GLushort indices[] = {0, 2, 3, 0, 1, 3, 4, 6, 7, 4, 5, 7, 8, 9, 10, 11, 8, 10, 12, 13, 14, 15, 12, 14, 16, 17, 18, 16, 19, 18, 20, 21, 22, 20, 23, 22};
+
+void renderFrame() {
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+
+    modelViewMatrix = Matrix4();
+    modelViewMatrix.rotateX(angle);
+    modelViewMatrix.translate(0.0f, 0.0f, -10.0f);
+
+    glUseProgram(simpleTriangleProgram);
+    glVertexAttribPointer(vertexLocation, 3, GL_FLOAT, GL_FALSE, 0, cubeVertices);
+    glEnableVertexAttribArray(vertexLocation);
+    glVertexAttribPointer(vertexColorLocation, 3, GL_FLOAT, GL_FALSE, 0, colour);
+    glEnableVertexAttribArray(vertexColorLocation);
+    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, projectionMatrix.get());
+    glUniformMatrix4fv(modelViewLocation, 1, GL_FALSE, modelViewMatrix.get());
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, indices);
+
+    if(angle > 360) {
+        angle = 0;
+    }
+    angle++;
+}
+
+bool setupGraphics(int w, int h) {
+    simpleTriangleProgram = createProgram(glVertexShader, glFragmentShader);
+    if(simpleTriangleProgram == 0) {
+        LOGE("Could not create program");
+        return false;
+    }
+    vertexLocation = glGetAttribLocation(simpleTriangleProgram, "vertexPosition");
+    vertexColorLocation = glGetAttribLocation(simpleTriangleProgram, "vertexColour");
+    projectionLocation = glGetUniformLocation(simpleTriangleProgram, "projection");
+    modelViewLocation = glGetUniformLocation(simpleTriangleProgram, "modelView");
+
+
+    //llmr::matrix::ortho(projectionMatrix, -10, 10, -10, 10, 0.1f, 100);
+    projectionMatrix = setFrustum(45, (float) w / (float) h, 0.1f, 100);
+    //matrixPerspective(projectionMatrix, 45, (float) w / (float) h, 0.1f, 100);
+    glEnable(GL_DEPTH_TEST);
+    glViewport(0,0,w,h);
+    return true;
+}
+
+extern "C" {
+    JNIEXPORT void JNICALL Java_com_jupiter_tusa_NativeLibrary_init(
         JNIEnv* env,
-        jobject /* this */) {
-    std::string hello = "Hello from C++";
-    return env->NewStringUTF(hello.c_str());
-}
-
-extern "C" JNIEXPORT jbyteArray JNICALL
-Java_com_jupiter_tusa_MainActivity_compressJpegImage(
-        JNIEnv* env, jobject thisz, jbyteArray byteArray, jint quality
-) {
-    unsigned char *inputImageCharBuffer, *outputImageBuffer;
-    jsize inputImageSize;
-    jbyte *inputImageJByte;
-    int outputImageBufferSize;
-    jbyteArray outputByteArrayImage;
-
-    inputImageSize = env->GetArrayLength(byteArray);
-    inputImageJByte = env->GetByteArrayElements(byteArray, JNI_FALSE);
-    inputImageCharBuffer = (unsigned  char*) malloc(inputImageSize + 1);
-    memcpy(inputImageCharBuffer, inputImageJByte, inputImageSize);
-    inputImageCharBuffer[inputImageSize] = '\0';
-
-    outputImageBuffer = simpleCompress(inputImageCharBuffer, inputImageSize, &outputImageBufferSize, quality);
-
-    outputByteArrayImage = env->NewByteArray(outputImageBufferSize);
-    env->SetByteArrayRegion(outputByteArrayImage, 0, outputImageBufferSize, (jbyte*) outputImageBuffer);
-
-    free(inputImageCharBuffer);
-    free(outputImageBuffer);
-    env->ReleaseByteArrayElements(byteArray, inputImageJByte, JNI_ABORT);
-
-    return outputByteArrayImage;
-}
-
-
-
-jobject triangulate(JNIEnv *env, jobject thiz, jfloatArray vertices, jintArray segments) {
-    struct triangulateio in, mid, out, vorout;
-
-    jsize inputPointsSize = env->GetArrayLength(vertices);
-    float* inputPointsElements = env->GetFloatArrayElements(vertices, nullptr);
-
-    jsize inputSegmentsSize = env->GetArrayLength(segments);
-    int* inputSegmentsElements = env->GetIntArrayElements(segments, nullptr);
-
-    in.numberofpoints = inputPointsSize/2;
-    in.numberofpointattributes = 0;
-    in.pointlist = (REAL *) malloc(in.numberofpoints * 2 * sizeof(REAL));
-    for(int i = 0; i < in.numberofpoints * 2; i++) {
-        in.pointlist[i] = inputPointsElements[i];
+        jclass clazz, jint width, jint height) {
+        setupGraphics(width, height);
     }
 
-    in.numberofsegments = inputSegmentsSize/2;
-    in.segmentlist = (int *) malloc(in.numberofsegments * 2 * sizeof(int));
-    for(int i = 0; i < in.numberofsegments * 2; i++) {
-        in.segmentlist[i] = inputSegmentsElements[i];
+    JNIEXPORT void JNICALL Java_com_jupiter_tusa_NativeLibrary_step(
+            JNIEnv* env,
+            jclass clazz) {
+        renderFrame();
     }
-
-    env->ReleaseIntArrayElements(segments, inputSegmentsElements, 0);
-    env->ReleaseFloatArrayElements(vertices, inputPointsElements, 0);
-
-//    in.pointlist[0] = 0.0;
-//    in.pointlist[1] = 0.0;
-//    in.pointlist[2] = 1.0;
-//    in.pointlist[3] = 0.0;
-//    in.pointlist[4] = 1.0;
-//    in.pointlist[5] = 10.0;
-//    in.pointlist[6] = 0.0;
-//    in.pointlist[7] = 10.0;
-    in.pointattributelist = (REAL *) malloc(in.numberofpoints *
-                                            in.numberofpointattributes *
-                                            sizeof(REAL));
-//    in.pointattributelist[0] = 0.0;
-//    in.pointattributelist[1] = 1.0;
-//    in.pointattributelist[2] = 11.0;
-//    in.pointattributelist[3] = 10.0;
-    in.pointmarkerlist = (int *) malloc(in.numberofpoints * sizeof(int));
-//    in.pointmarkerlist[0] = 0;
-//    in.pointmarkerlist[1] = 2;
-//    in.pointmarkerlist[2] = 0;
-//    in.pointmarkerlist[3] = 0;
-
-    in.numberofholes = 0;
-    in.numberofregions = 0;
-    in.regionlist = (REAL *) malloc(in.numberofregions * 4 * sizeof(REAL));
-//    in.regionlist[0] = 0.5;
-//    in.regionlist[1] = 5.0;
-//    in.regionlist[2] = 7.0;            /* Regional attribute (for whole mesh). */
-//    in.regionlist[3] = 0.1;          /* Area constraint that will not be used. */
-
-    printf("Input point set:\n\n");
-
-    /* Make necessary initializations so that Triangle can return a */
-    /*   triangulation in `mid' and a voronoi diagram in `vorout'.  */
-
-    mid.pointlist = (REAL *) NULL;            /* Not needed if -N switch used. */
-    /* Not needed if -N switch used or number of point attributes is zero: */
-    mid.pointattributelist = (REAL *) NULL;
-    mid.pointmarkerlist = (int *) NULL; /* Not needed if -N or -B switch used. */
-    mid.trianglelist = (int *) NULL;          /* Not needed if -E switch used. */
-    /* Not needed if -E switch used or number of triangle attributes is zero: */
-    mid.triangleattributelist = (REAL *) NULL;
-    mid.neighborlist = (int *) NULL;         /* Needed only if -n switch used. */
-    /* Needed only if segments are output (-p or -c) and -P not used: */
-    mid.segmentlist = (int *) NULL;
-    /* Needed only if segments are output (-p or -c) and -P and -B not used: */
-    mid.segmentmarkerlist = (int *) NULL;
-    mid.edgelist = (int *) NULL;             /* Needed only if -e switch used. */
-    mid.edgemarkerlist = (int *) NULL;   /* Needed if -e used and -B not used. */
-
-    vorout.pointlist = (REAL *) NULL;        /* Needed only if -v switch used. */
-    /* Needed only if -v switch used and number of attributes is not zero: */
-    vorout.pointattributelist = (REAL *) NULL;
-    vorout.edgelist = (int *) NULL;          /* Needed only if -v switch used. */
-    vorout.normlist = (REAL *) NULL;         /* Needed only if -v switch used. */
-
-    /* Triangulate the points.  Switches are chosen to read and write a  */
-    /*   PSLG (p), preserve the convex hull (c), number everything from  */
-    /*   zero (z), assign a regional attribute to each element (A), and  */
-    /*   produce an edge list (e), a Voronoi diagram (v), and a triangle */
-    /*   neighbor list (n).                                              */
-
-    triangulate("pz", &in, &mid, &vorout);
-
-    printf("Initial triangulation:\n\n");
-    printf("Initial Voronoi diagram:\n\n");
-
-    /* Attach area constraints to the triangles in preparation for */
-    /*   refining the triangulation.                               */
-
-    /* Needed only if -r and -a switches used: */
-    mid.trianglearealist = (REAL *) malloc(mid.numberoftriangles * sizeof(REAL));
-    mid.trianglearealist[0] = 3.0;
-    mid.trianglearealist[1] = 1.0;
-
-    /* Make necessary initializations so that Triangle can return a */
-    /*   triangulation in `out'.                                    */
-
-    out.pointlist = (REAL *) NULL;            /* Not needed if -N switch used. */
-    /* Not needed if -N switch used or number of attributes is zero: */
-    out.pointattributelist = (REAL *) NULL;
-    out.trianglelist = (int *) NULL;          /* Not needed if -E switch used. */
-    /* Not needed if -E switch used or number of triangle attributes is zero: */
-    out.triangleattributelist = (REAL *) NULL;
-
-    /* Refine the triangulation according to the attached */
-    /*   triangle area constraints.                       */
-
-    //triangulate("prazBP", &mid, &out, (struct triangulateio *) NULL);
-
-    jfloatArray jPointsArray = env->NewFloatArray(mid.numberofpoints  * 2);
-    env->SetFloatArrayRegion(jPointsArray, 0, mid.numberofpoints * 2, mid.pointlist);
-
-    jintArray jTrianglesArray = env->NewIntArray(mid.numberoftriangles * 3);
-    env->SetIntArrayRegion(jTrianglesArray, 0, mid.numberoftriangles * 3, mid.trianglelist);
-
-    /* Free all allocated arrays, including those allocated by Triangle. */
-    free(in.pointlist);
-    free(in.pointattributelist);
-    free(in.pointmarkerlist);
-    free(in.regionlist);
-    free(mid.pointlist);
-    free(mid.pointattributelist);
-    free(mid.pointmarkerlist);
-    free(mid.trianglelist);
-    free(mid.triangleattributelist);
-    free(mid.trianglearealist);
-    free(mid.neighborlist);
-    free(mid.segmentlist);
-    free(mid.segmentmarkerlist);
-    free(mid.edgelist);
-    free(mid.edgemarkerlist);
-    free(vorout.pointlist);
-    free(vorout.pointattributelist);
-    free(vorout.edgelist);
-    free(vorout.normlist);
-    free(out.pointlist);
-    free(out.pointattributelist);
-    free(out.trianglelist);
-    free(out.triangleattributelist);
-
-    jclass wrapperClass = env->FindClass("com/jupiter/tusa/jnioutput/TriangulateOutput");
-    jmethodID  constructor = env->GetMethodID(wrapperClass, "<init>", "([F[I)V");
-    jobject result = env->NewObject(wrapperClass, constructor, jPointsArray, jTrianglesArray);
-    return result;
 }
+
+
 
 extern "C"
-JNIEXPORT jobject JNICALL
-Java_com_jupiter_tusa_MainActivity_triangulate(JNIEnv *env, jobject thiz, jobject arrayList) {
-    // Get the class and method IDs for ArrayList and the TriangleInput class.
-    jclass arrayListClass = env->GetObjectClass(arrayList);
-    jclass triangleInputClass = env->FindClass("com/jupiter/tusa/jnioutput/TriangleInput");
-    jmethodID getMethod = env->GetMethodID(arrayListClass, "get", "(I)Ljava/lang/Object;");
-    jmethodID sizeMethod = env->GetMethodID(arrayListClass, "size", "()I");
-    jint listSize = env->CallIntMethod(arrayList, sizeMethod);
+JNIEXPORT void JNICALL
+Java_com_jupiter_tusa_NativeLibrary_surfaceCreated(JNIEnv *env, jclass clazz, jobject assetManager) {
+    AAssetManager* assetManagerFromJava = AAssetManager_fromJava(env, assetManager);
+    map.init(assetManagerFromJava);
 
-    jmethodID arrayListConstructor = env->GetMethodID(arrayListClass, "<init>", "()V");
-    jmethodID addMethod = env->GetMethodID(arrayListClass, "add", "(Ljava/lang/Object;)Z");
-    jobject arrayListOutput = env->NewObject(arrayListClass, arrayListConstructor);
 
-    for (int i = 0; i < listSize; i++) {
-        jobject triangleObject = env->CallObjectMethod( arrayList, getMethod, i);
-        jfieldID verticesField = env->GetFieldID(triangleInputClass, "vertices", "[F");
-        jfieldID segmentsField = env->GetFieldID(triangleInputClass, "segments", "[I");
 
-        auto verticesArray = (jfloatArray)env->GetObjectField(triangleObject, verticesField);
-        auto segmentsArray = (jintArray)env->GetObjectField(triangleObject, segmentsField);
-
-        jobject triangleOutput = triangulate(env, thiz, verticesArray, segmentsArray);
-        env->CallBooleanMethod(arrayListOutput, addMethod, triangleOutput);
-    }
-
-    return arrayListOutput;
 }
 
-extern "C"
-JNIEXPORT jobject JNICALL
-Java_com_jupiter_tusa_MainActivity_triangulateOne(JNIEnv *env, jobject thiz, jfloatArray vertices, jintArray segments) {
-    return triangulate(env, thiz, vertices, segments);
-}

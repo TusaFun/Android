@@ -120,6 +120,7 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
             Map<String, VectorTile.Tile.Value> tags = mvtObject.getTags();
             MapStyleParameters parameters = mapStyle.getStyleParametersForFeature(mvtObject.getLayerName(), tags, tileZ);
             mvtObjectStyledList.add(new MvtObjectStyled(
+                    tilesChunkCounter.getKey(),
                     mvtObject,
                     parameters
             ));
@@ -128,23 +129,24 @@ public class MvtToDrawObjectPipeRunnable implements Runnable {
 
 
         // Convert to data input objects for OpenGL
-        List<FDOFloatBasicInput> fdoFloatBasicInputs = new ArrayList<>();
-        for(MvtObjectStyled mvtObjectStyled : mvtObjectStyledList) {
-            fdoFloatBasicInputs.add(new FDOFloatBasicInput(
-                    tilesChunkCounter.getKey(),
-                    mvtObjectStyled.getVertices(),
-                    mvtObjectStyled.getDrawOrder(),
-                    mvtObjectStyled.getCoordinatesPerVertex(),
-                    mvtObjectStyled.getSizeOfOneCoordinate(),
-                    FDOFloatBasicInput.getModeFromMvtShape(mvtObjectStyled.getShape()),
-                    mvtObjectStyled.getParameters().getColor(),
-                    mvtObjectStyled.getParameters().getLineWidth()
-            ));
-        }
+//        List<FDOFloatBasicInput> fdoFloatBasicInputs = new ArrayList<>();
+//        for(MvtObjectStyled mvtObjectStyled : mvtObjectStyledList) {
+//            fdoFloatBasicInputs.add(new FDOFloatBasicInput(
+//                    tilesChunkCounter.getKey(),
+//                    mvtObjectStyled.getKey(),
+//                    mvtObjectStyled.getVertices(),
+//                    mvtObjectStyled.getDrawOrder(),
+//                    mvtObjectStyled.getCoordinatesPerVertex(),
+//                    mvtObjectStyled.getSizeOfOneCoordinate(),
+//                    FDOFloatBasicInput.getModeFromMvtShape(mvtObjectStyled.getShape()),
+//                    mvtObjectStyled.getParameters().getColor(),
+//                    mvtObjectStyled.getParameters().getLineWidth()
+//            ));
+//        }
         // END Convert to data input objects for OpenGL
 
-        tilesChunkCounter.increaseLoaded();
-        TileDataForPrograms tileDataForPrograms = new TileDataForPrograms(fdoFloatBasicInputs);
+        tilesChunkCounter.increaseLoaded(mvtObjectStyledList);
+        TileDataForPrograms tileDataForPrograms = new TileDataForPrograms(mvtObjectStyledList);
         onReady.handle(new MvtToDrawPipeOutput(tilesChunkCounter, tileDataForPrograms));
     }
 }

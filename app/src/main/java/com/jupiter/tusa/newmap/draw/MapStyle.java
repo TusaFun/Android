@@ -19,9 +19,9 @@ public class MapStyle {
         add("landcover");
         add("hillshade");
         add("water");
-        add("landuse");
+        //add("landuse");
         add("road");
-        add("landuse_overlay");
+        //add("landuse_overlay");
         add("waterway");
         add("aeroway");
         add("transit_stop_label");
@@ -34,10 +34,12 @@ public class MapStyle {
         add("admin");
     }};
 
-
-
     public MapStyleParameters getStyleParametersForFeature(String name, Map<String, VectorTile.Tile.Value> tags, int zoom) {
         MapStyleParameters mapStyleParameters = new MapStyleParameters();
+        if(tags.containsKey("class")) {
+            String classValue = Objects.requireNonNull(tags.get("class")).getStringValue();
+            mapStyleParameters.setClassValue(classValue);
+        }
         if(Objects.equals(name, "landcover")) {
             mapStyleParameters.setZ(0f);
             if(tags.containsKey("class")) {
@@ -56,11 +58,7 @@ public class MapStyle {
             return mapStyleParameters;
         }
 
-        if(Objects.equals(name, "water")) {
-            mapStyleParameters.setZ(0f);
-            mapStyleParameters.setColor(ColorUtils.hslaToRgba(197, 98, 78, 1));
-            return mapStyleParameters;
-        }
+
 
         if(name.equals("hillshade")) {
             mapStyleParameters.setZ(0.02f);
@@ -243,12 +241,18 @@ public class MapStyle {
             return mapStyleParameters;
         }
 
+        if(Objects.equals(name, "water")) {
+            mapStyleParameters.setZ(0.91f);
+            mapStyleParameters.setColor(ColorUtils.hslaToRgba(197, 98, 78, 1));
+            return mapStyleParameters;
+        }
+
         if(Objects.equals(name, "admin")) {
+            mapStyleParameters.setZ(0.99f);
             if(zoom > 12) {
                 mapStyleParameters.setColor(new float[] {0f,0f,0f,0f});
                 return mapStyleParameters;
             }
-            mapStyleParameters.setZ(0.99f);
             boolean disputed = Objects.requireNonNull(tags.get("disputed")).getBoolValue();
             String iso = Objects.requireNonNull(tags.get("iso_3166_1")).getStringValue();
             boolean insideCountry = !iso.contains("-");

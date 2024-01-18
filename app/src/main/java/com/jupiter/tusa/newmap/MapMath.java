@@ -4,7 +4,7 @@ import android.opengl.Matrix;
 
 public class MapMath {
     public static float[] screenCoordinatesToWorldLocation(
-            int viewportHeight, int viewportWidth,
+            int viewportWidth, int viewportHeight,
             float x, float y,
             float[] modelViewMatrix
     ) {

@@ -11,12 +11,9 @@ import androidx.annotation.NonNull;
 import com.jupiter.tusa.MainActivity;
 import com.jupiter.tusa.cache.CacheStorage;
 import com.jupiter.tusa.newmap.camera.MapWorldCamera;
-import com.jupiter.tusa.newmap.chunk.ChunksWindow;
 import com.jupiter.tusa.newmap.draw.MapStyle;
 import com.jupiter.tusa.newmap.event.GlSurfaceChangedEvent;
 import com.jupiter.tusa.newmap.event.GlSurfaceCreatedEvent;
-
-import org.checkerframework.checker.units.qual.C;
 
 public class MapSurfaceView extends GLSurfaceView {
     public MapSurfaceView(Context context) {
@@ -59,13 +56,12 @@ public class MapSurfaceView extends GLSurfaceView {
         distanceToTileZ = new DistanceToTileZ(maxTileZoom);
         tileWorldCoordinates = new TileWorldCoordinates();
 
-        ChunksWindow chunksWindow = new ChunksWindow(3,3);
-        chunksWindow.shiftWindow(0, 0, 0);
-
-        float initScaleFactor = distanceToTileZ.calcDistanceForZ(1);
+        float initScaleFactor = distanceToTileZ.calcDistanceForZ(4);
         mapScaleListener = new MapScaleListener(initScaleFactor);
-        int mapZ = distanceToTileZ.calcCurrentTileZ(initScaleFactor);
-        tileWorldCoordinates.updateMapZ(mapZ);
+        int startZ = distanceToTileZ.calcCurrentTileZ(initScaleFactor);
+        tileWorldCoordinates.updateMapZ(startZ);
+        currentMapX = tileWorldCoordinates.getCurrentExtent() * 5;
+        currentMapY = -tileWorldCoordinates.getCurrentExtent() * 5;
 
         mScaleDetector = new ScaleGestureDetector(context, mapScaleListener);
         gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
@@ -79,6 +75,8 @@ public class MapSurfaceView extends GLSurfaceView {
         setEGLContextClientVersion(2);
         mapRenderer = new MapRenderer(
                 this,
+                currentMapX,
+                currentMapY,
                 initScaleFactor,
                 new GlSurfaceCreatedEvent(this),
                 new GlSurfaceChangedEvent(this)
@@ -122,9 +120,9 @@ public class MapSurfaceView extends GLSurfaceView {
                 currentMapX += dx * glWorldWidth * moveSpeed;
                 currentMapY -= dy * glWorldWidth * moveSpeed;
                 mapWorldCamera.moveXY(currentMapX, currentMapY);
-                boolean changed = tileWorldCoordinates.updateCurrentTileXY(currentMapX, currentMapY);
+                boolean changed = tileWorldCoordinates.shouldUpdateStateOnMove(currentMapX, currentMapY);
                 if(changed) {
-                    //mapTilesShower.nextMapState();
+                    mapTilesShower.nextMapState();
                 }
 
                 float[] coordinates = mapWorldCamera.getBottomRightWorldViewCoordinates();

@@ -26,6 +26,8 @@ public class MapRenderer implements GLSurfaceView.Renderer {
 
     public MapRenderer(
             MapSurfaceView mapSurfaceView,
+            float startX,
+            float startY,
             float initScaleFactor,
             MapSignatureEvent<MapRenderer> glSurfaceCreated,
             MapSignatureEvent<MapRenderer> glSurfaceChanged
@@ -36,8 +38,8 @@ public class MapRenderer implements GLSurfaceView.Renderer {
         this.glSurfaceCreatedHandler = glSurfaceCreated;
         this.glSurfaceChangedHandler = glSurfaceChanged;
         mapWorldCamera = new MapWorldCamera(
-                0,
-                0,
+                startX,
+                startY,
                 initScaleFactor,
                 mapSurfaceView.getTileWorldCoordinates()
         );

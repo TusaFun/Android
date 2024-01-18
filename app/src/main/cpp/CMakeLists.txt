@@ -2,47 +2,46 @@
 # documentation: https://d.android.com/studio/projects/add-native-code.html
 
 
-cmake_minimum_required(VERSION 3.18.1)
+cmake_minimum_required(VERSION 3.22.1)
 
 project("tusa")
 
-add_library(turbojpeg STATIC IMPORTED )
-set_target_properties(turbojpeg
-        PROPERTIES
-        IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/turbojpeg/${ANDROID_ABI}/libturbojpeg.a
-#        INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/turbojpeg/include
-)
-
-add_library(exif STATIC IMPORTED )
-set_target_properties(exif
-        PROPERTIES
-        IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/exif/${ANDROID_ABI}/libexif.a
-#        INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_SOURCE_DIR}/exif/include
-)
-
-#add_library(triangle OBJECT ${CMAKE_SOURCE_DIR}/exif/${ANDROID_ABI}/triangle.o)
+set(PROTO_FILE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/proto/vector_tile.proto)
+set(PROTO_GENERATED_PATH ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 add_library(tusa SHARED
         native-lib.cpp
-        tusa-jpeg.cpp
+
+        shader/plain_shader.cpp
+        shader/shaders_bucket.cpp
+        shader/shader.cpp
+
+        renderer/renderer.cpp
+
+        util/frustrums.cpp
+        util/matrices.cpp
+        util/timer.cpp
+
+        map/map.cpp
+
+        csscolorparser/csscolorparser.cpp
 )
 
-#add_custom_target(triangle ALL DEPENDS ${CMAKE_SOURCE_DIR}/triangle/${ANDROID_ABI}/triangle.o)
-#add_dependencies(tusa triangle)
-#add_library(triangle STATIC ${CMAKE_SOURCE_DIR}/triangle/${ANDROID_ABI}/triangle.o)
-#set_target_properties(triangle PROPERTIES LINKER_LANGUAGE C)
+target_include_directories(tusa PRIVATE include)
 
-target_include_directories(tusa PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-set(TRIANGLE_PATH ${CMAKE_SOURCE_DIR}/triangle/${ANDROID_ABI}/triangle.o)
-
-find_library(log-lib  log)
-target_link_libraries(tusa PUBLIC ${log-lib} exif turbojpeg  ${TRIANGLE_PATH})
+include(${PROJECT_SOURCE_DIR}/vendor/protozero.cmake)
+include(${PROJECT_SOURCE_DIR}/vendor/vector-tile.cmake)
+include(${PROJECT_SOURCE_DIR}/vendor/earcut.hpp.cmake)
+include(${PROJECT_SOURCE_DIR}/vendor/boost.cmake)
 
 
+target_link_libraries(tusa
+        mbgl-vendor-protozero
+        mbgl-vendor-vector-tile
+        mbgl-vendor-earcut.hpp
+        mbgl-vendor-boost
+)
 
-
-
-
-
-
+target_link_libraries(tusa log)
+target_link_libraries(tusa GLESv2)
+target_link_libraries(tusa android)

@@ -17,9 +17,18 @@ public class MapStyleParameters {
 
     public void setZ(float z) {this.z = z;}
 
+    public void setClassValue(String classValue) {
+        this.classValue = classValue;
+    }
+
+    public String getClassValue() {
+        return classValue;
+    }
+
     public float getZ() {return z;}
 
     private float[] color;
     private float lineWidth;
     private float z;
+    private String classValue;
 }

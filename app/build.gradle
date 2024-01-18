@@ -17,7 +17,7 @@ android {
         }
     }
 
-
+    ndkVersion = "23.1.7779620"
 
     defaultConfig {
         applicationId "com.jupiter.tusa"
@@ -63,11 +63,12 @@ android {
     externalNativeBuild {
         cmake {
             path file('src/main/cpp/CMakeLists.txt')
-            version '3.18.1'
+            version '3.22.1'
         }
     }
     buildFeatures {
         viewBinding true
+        buildConfig true
     }
 }
 

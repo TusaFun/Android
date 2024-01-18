@@ -17,6 +17,7 @@ import com.jupiter.tusa.databinding.ActivityMainBinding;
 import com.jupiter.tusa.grpc.TusaGrpc;
 import com.jupiter.tusa.jnioutput.TriangleInput;
 import com.jupiter.tusa.jnioutput.TriangulateOutput;
+import com.jupiter.tusa.nativemap.MapView;
 import com.jupiter.tusa.ui.LoginFragment;
 import com.jupiter.tusa.ui.MapFragment;
 
@@ -25,14 +26,10 @@ import java.util.ArrayList;
 import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
-
-    // Used to load the 'tusa' library on application startup.
-    static {
-        System.loadLibrary("tusa");
-    }
-
     // cache
     private CacheStorage cacheStorage;
+
+    private MapView mapView;
 
     private ActivityMainBinding binding;
     private FragmentManager fragmentManager;
@@ -58,6 +55,18 @@ public class MainActivity extends AppCompatActivity {
         );
         fragmentTransaction.replace(R.id.fragment_container, fragment);
         fragmentTransaction.commit();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mapView.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mapView.onResume();
     }
 
     public void logout() {
@@ -98,16 +107,17 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        cacheStorage = new CacheStorage(this);
+        mapView = new MapView(this);
+        setContentView(mapView);
 
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
-        fragmentManager = getSupportFragmentManager();
-
-        SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences(
-                TusaWorker.SharedPreferencesName, Context.MODE_PRIVATE);
-        long expirationTimestamp = sharedPreferences.getLong(TusaWorker.SharedPreferencesAccessTokenExpiresTimestampMillisecondsKey, 0);
-        Date expirationTimestampDate = new Date(expirationTimestamp * 1000);
+//        cacheStorage = new CacheStorage(this);
+//        binding = ActivityMainBinding.inflate(getLayoutInflater());
+//        setContentView(binding.getRoot());
+//        fragmentManager = getSupportFragmentManager();
+//        SharedPreferences sharedPreferences = getApplicationContext().getSharedPreferences(
+//                TusaWorker.SharedPreferencesName, Context.MODE_PRIVATE);
+//        long expirationTimestamp = sharedPreferences.getLong(TusaWorker.SharedPreferencesAccessTokenExpiresTimestampMillisecondsKey, 0);
+//        Date expirationTimestampDate = new Date(expirationTimestamp * 1000);
 
 //        if(expirationTimestampDate.before(new Date())) {
 //            LoginFragment loginFragment = new LoginFragment();
@@ -117,10 +127,8 @@ public class MainActivity extends AppCompatActivity {
 //            setFragment(mainFragment);
 //            PeriodicWorkRequestHelper.requestMainWorker(getApplicationContext(), true);
 //        }
-
-        Fragment mainFragment = new MapFragment();
-        setFragment(mainFragment);
-
+//        Fragment mainFragment = new MapFragment();
+//        setFragment(mainFragment);
         if(getSupportActionBar() != null) {
             getSupportActionBar().hide();
         }
@@ -136,14 +144,5 @@ public class MainActivity extends AppCompatActivity {
 
         return new File(cachePath + File.separator + uniqueName);
     }
-
-    /**
-     * A native method that is implemented by the 'tusa' native library,
-     * which is packaged with this application.
-     */
-    public native String stringFromJNI();
-    public native byte[] compressJpegImage(byte[] inputImage, int quality);
-    public native ArrayList<TriangulateOutput> triangulate(ArrayList<TriangleInput> input);
-    public native TriangulateOutput triangulateOne(float[] vertices, int[] segments);
 }
 

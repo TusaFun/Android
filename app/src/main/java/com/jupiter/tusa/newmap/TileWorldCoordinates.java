@@ -21,9 +21,9 @@ public class TileWorldCoordinates {
         currentExtent = (float) Math.pow(2, 19 - z);
     }
 
-    public boolean updateCurrentTileXY(float x, float y) {
-        int newX = (int) (x / currentExtent);
-        int newY = (int) (y / currentExtent);
+    public boolean shouldUpdateStateOnMove(float x, float y) {
+        int newX = (int) (x * 2 / currentExtent);
+        int newY = (int) (y * 2 / currentExtent);
 
         if(currentTileX != newX || currentTileY != newY) {
             currentTileX = newX;

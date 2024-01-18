@@ -67,13 +67,13 @@ public class MapWorldCamera {
         int borderAmountTiles = (int) Math.pow(2, mapZ);
         int maxTileNumber = borderAmountTiles - 1;
 
-        int startXTile = (int) (startX / extent);
+        int startXTile = (int) (startX / extent) - 1;
         startXTile = MathUtils.clamp(startXTile, 0, maxTileNumber);
-        int endXTile = (int) (endX / extent);
+        int endXTile = (int) (endX / extent) + 1;
         endXTile = MathUtils.clamp(endXTile, 0, maxTileNumber);
-        int startYTile = (int) (startY / extent);
+        int startYTile = (int) (startY / extent) - 1;
         startYTile = MathUtils.clamp(startYTile, 0, maxTileNumber);
-        int endYTile = (int) (endY / extent);
+        int endYTile = (int) (endY / extent) + 1;
         endYTile = MathUtils.clamp(endYTile, 0, maxTileNumber);
         return new ViewTitles(startXTile, endXTile, startYTile, endYTile, mapZ);
     }
@@ -87,10 +87,10 @@ public class MapWorldCamera {
 
     private void updateVisibleCornersWorldCoordinates() {
         upperLeftWorldViewCoordinates = MapMath.screenCoordinatesToWorldLocation(
-                viewportHeight, viewportWidth,0, 0, modelViewMatrix
+                viewportWidth, viewportHeight,0, 0, modelViewMatrix
         );
         bottomRightWorldViewCoordinates = MapMath.screenCoordinatesToWorldLocation(
-                viewportHeight, viewportWidth,viewportWidth, viewportHeight, modelViewMatrix
+                viewportWidth, viewportHeight, viewportWidth, viewportHeight, modelViewMatrix
         );
     }
 
